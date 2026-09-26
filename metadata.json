@@ -1,0 +1,6 @@
+{
+  "name": "Digitano PRD Builder",
+  "description": "Autonomous Multi-Agent SDLC Engine orchestrating a 7-agent AI Scrum team to analyze project briefs, generate PRDs, schemas, API contracts, and Vibe-Coder prompts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

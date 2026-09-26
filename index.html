@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Digitano PRD Builder</title>
+    <meta name="description" content="Autonomous Multi-Agent SDLC Engine orchestrating a 7-agent AI Scrum team to analyze project briefs, generate PRDs, schemas, API contracts, and Vibe-Coder prompts." />
+    <meta property="og:title" content="Digitano PRD Builder" />
+    <meta property="og:description" content="Autonomous Multi-Agent SDLC Engine orchestrating a 7-agent AI Scrum team to analyze project briefs, generate PRDs, schemas, API contracts, and Vibe-Coder prompts." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <script>
+      window.global = window;
+      // In Google AI Studio iframe environment, HMR WebSockets are disabled.
+      // Filter out benign Vite HMR reconnection notices to keep the developer console clean.
+      window.addEventListener('unhandledrejection', function (event) {
+        if (
+          event?.reason &&
+          (typeof event.reason === 'string' || event.reason.message) &&
+          String(event.reason.message || event.reason).includes('WebSocket closed without opened')
+        ) {
+          event.preventDefault();
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
