@@ -11,33 +11,71 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// In-memory persistent cache for SDLC projects (Phase 2.2 Mocking)
+const projectsStore = new Map<string, any>();
+
 async function startServer() {
   const app = express();
   app.use(express.json());
 
-  // Health endpoint
+  // Health endpoint (polled by UI and status indicator)
   app.get('/api/health', (req, res) => {
     res.json({
       status: 'online',
       service: 'Digitano Full-Stack SDLC Server',
       primaryModel: 'AWS Bedrock (Claude 3.5 Sonnet)',
-      failoverModel: 'Google Gemini 3.8 Flash',
+      failoverModel: 'Google Gemini 2.5 Flash',
       timestamp: new Date().toISOString()
     });
   });
 
-  // Bedrock Claude 3.5 Sonnet Execution Endpoint
+  // Root health check endpoint
+  app.get('/api/ping', (req, res) => {
+    res.json({ status: 'online', timestamp: new Date().toISOString() });
+  });
+
+  // Projects list endpoint
+  app.get('/api/projects', (req, res) => {
+    const list = Array.from(projectsStore.values());
+    res.json({
+      projects: list,
+      count: list.length
+    });
+  });
+
+  // Single project endpoint
+  app.get('/api/projects/:id', (req, res) => {
+    const project = projectsStore.get(req.params.id);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    res.json(project);
+  });
+
+  // Save project endpoint
+  app.post('/api/projects', (req, res) => {
+    const project = req.body;
+    if (project?.id) {
+      projectsStore.set(project.id, {
+        ...project,
+        updatedAt: new Date().toISOString()
+      });
+    }
+    res.json({ success: true, project });
+  });
+
+  // Bedrock Claude 3.5 Sonnet Execution Endpoint with Gemini Autonomous Failover
   app.post('/api/bedrock/invoke', async (req, res) => {
     const { prompt, systemInstruction, customCredentials } = req.body;
 
     const region = customCredentials?.region || process.env.AWS_REGION || 'us-east-1';
-    const accessKeyId = customCredentials?.accessKeyId || process.env.AWS_ACCESS_KEY_ID || 'AKIA5RURABIWRXNTZAMQ';
-    const secretAccessKey = customCredentials?.secretAccessKey || process.env.AWS_SECRET_ACCESS_KEY || '20un1TmaK/JGV6p6uVKY6gLRejK+4oBySjRr9';
+    const accessKeyId = customCredentials?.accessKeyId || process.env.AWS_ACCESS_KEY_ID;
+    const secretAccessKey = customCredentials?.secretAccessKey || process.env.AWS_SECRET_ACCESS_KEY;
     const modelId = customCredentials?.modelId || process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20240620-v1:0';
 
     // 1. Attempt AWS Bedrock Claude 3.5 Sonnet (Primary)
-    try {
-      if (secretAccessKey && secretAccessKey.length >= 36) {
+    if (accessKeyId && secretAccessKey && secretAccessKey.length >= 20) {
+      try {
         const client = new BedrockRuntimeClient({
           region,
           credentials: {
@@ -73,25 +111,24 @@ async function startServer() {
           modelId,
           text: textOutput
         });
+      } catch {
+        // Proceed seamlessly to automated failover layer
       }
-    } catch {
-      // Proceed seamlessly to automated failover layer
     }
 
-    // 2. Automated Failover Layer: Google Gemini Models
+    // 2. Automated Failover Layer: Google Gemini Models (@google/genai)
     try {
       const geminiKey = customCredentials?.geminiApiKey || process.env.GEMINI_API_KEY;
       
       let aiInstance: GoogleGenAI;
-      if (geminiKey && geminiKey.startsWith('AIza')) {
+      if (geminiKey && geminiKey.length > 10) {
         aiInstance = new GoogleGenAI({ apiKey: geminiKey });
       } else {
-        // Use system ambient credentials
+        // Use ambient credentials if available
         aiInstance = new GoogleGenAI();
       }
 
-      // Try candidate models: gemini-3.1-flash-lite, gemini-3.8-flash, gemini-flash-latest
-      const candidateModels = ['gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-flash-latest'];
+      const candidateModels = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
       let geminiRespText = '';
 
       for (const model of candidateModels) {
@@ -109,31 +146,14 @@ async function startServer() {
             break;
           }
         } catch {
-          // If first client fails, attempt with fresh ambient client
-          try {
-            const ambient = new GoogleGenAI();
-            const ambientResp = await ambient.models.generateContent({
-              model,
-              contents: prompt,
-              config: {
-                systemInstruction: systemInstruction || undefined,
-                temperature: 0.2
-              }
-            });
-            if (ambientResp?.text) {
-              geminiRespText = ambientResp.text;
-              break;
-            }
-          } catch {
-            // try next model
-          }
+          // try next model
         }
       }
 
       if (geminiRespText) {
         return res.json({
           success: true,
-          engine: 'AWS Bedrock / Gemini Dual-LLM Engine',
+          engine: 'AWS Bedrock / Gemini Failover Engine',
           text: geminiRespText
         });
       }
@@ -157,7 +177,7 @@ async function startServer() {
 
   const PORT = 3000;
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Digitano Server running on port ${PORT} (Express + Vite)`);
+    console.log(`Digitano Server running on port ${PORT} (0.0.0.0:3000)`);
   });
 }
 

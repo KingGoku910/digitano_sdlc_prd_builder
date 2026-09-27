@@ -10,6 +10,7 @@ export default defineConfig(() => {
   return {
     define: {
       global: 'window',
+      'process.env': {},
     },
     plugins: [react(), tailwindcss()],
     resolve: {

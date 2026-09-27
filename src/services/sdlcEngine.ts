@@ -65,11 +65,11 @@ export async function executeAgentReasoning(
     // defaults
   }
 
-  const accessKeyId = savedSettings.awsAccessKeyId || "AKIA5RURABIWRXNTZAMQ";
-  const secretAccessKey = savedSettings.awsSecretAccessKey || "20un1TmaK/JGV6p6uVKY6gLRejK+4oBySjRr9";
+  const accessKeyId = savedSettings.awsAccessKeyId || "";
+  const secretAccessKey = savedSettings.awsSecretAccessKey || "";
   const region = savedSettings.awsRegion || "us-east-1";
   const modelId = savedSettings.bedrockModelId || "anthropic.claude-3-5-sonnet-20240620-v1:0";
-  const geminiApiKey = savedSettings.geminiApiKey || "AQ.Ab8RN6IbN3l3eHAnMJLQJHuT0-6k0cSTUk";
+  const geminiApiKey = savedSettings.geminiApiKey || "";
 
   // 1. PRIMARY ATTEMPT: AWS Bedrock (Claude 3.5 Sonnet) via server endpoint
   try {
