@@ -19,7 +19,6 @@ export function SecretsModal({ isOpen, onClose }: SecretsModalProps) {
   const [awsRegion, setAwsRegion] = useState("us-east-1");
   const [bedrockModelId, setBedrockModelId] = useState("anthropic.claude-sonnet-4-6");
   const [bedrockModel2Id, setBedrockModel2Id] = useState("anthropic.claude-3-5-sonnet-20241022-v2:0");
-  const [bedrockModel3Id, setBedrockModel3Id] = useState("anthropic.claude-sonnet-5");
   const [userPoolId, setUserPoolId] = useState(COGNITO_CONFIG.UserPoolId);
   const [clientId, setClientId] = useState(COGNITO_CONFIG.ClientId);
   const [tableName, setTableName] = useState("DigitanoProjects");
@@ -38,11 +37,12 @@ export function SecretsModal({ isOpen, onClose }: SecretsModalProps) {
           setAwsSecretAccessKey(parsed.awsSecretAccessKey);
         }
         if (parsed.awsRegion) setAwsRegion(parsed.awsRegion);
-        if (parsed.bedrockModelId && !parsed.bedrockModelId.includes("20240620")) {
+        if (parsed.bedrockModelId && !parsed.bedrockModelId.includes("20240620") && !parsed.bedrockModelId.includes("sonnet-5")) {
           setBedrockModelId(parsed.bedrockModelId);
         }
-        if (parsed.bedrockModel2Id) setBedrockModel2Id(parsed.bedrockModel2Id);
-        if (parsed.bedrockModel3Id) setBedrockModel3Id(parsed.bedrockModel3Id);
+        if (parsed.bedrockModel2Id && !parsed.bedrockModel2Id.includes("sonnet-5")) {
+          setBedrockModel2Id(parsed.bedrockModel2Id);
+        }
         if (parsed.userPoolId) setUserPoolId(parsed.userPoolId);
         if (parsed.clientId) setClientId(parsed.clientId);
         if (parsed.tableName) setTableName(parsed.tableName);
@@ -74,7 +74,6 @@ export function SecretsModal({ isOpen, onClose }: SecretsModalProps) {
         awsRegion,
         bedrockModelId,
         bedrockModel2Id,
-        bedrockModel3Id,
         userPoolId,
         clientId,
         tableName,
@@ -268,12 +267,12 @@ export function SecretsModal({ isOpen, onClose }: SecretsModalProps) {
               <div className="p-3.5 rounded-xl bg-[#131924] border border-[#1E293B] space-y-2.5 sm:col-span-2">
                 <div className="flex items-center justify-between text-xs font-mono text-slate-400">
                   <span className="text-cyan-400 font-semibold">BEDROCK CLAUDE SONNET MODELS (PRIORITIZED POOL)</span>
-                  <span className="text-slate-500 text-[10px]">Priority 1 &rarr; Priority 2 &rarr; Priority 3</span>
+                  <span className="text-slate-500 text-[10px]">Priority 1 &rarr; Priority 2</span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div className="space-y-1">
-                    <span className="text-[10px] font-mono text-slate-400">Priority 1 (Model 1)</span>
+                    <span className="text-[10px] font-mono text-slate-400">Priority 1 (Primary Model)</span>
                     <div className="flex items-center gap-1.5">
                       <input
                         type="text"
@@ -293,7 +292,7 @@ export function SecretsModal({ isOpen, onClose }: SecretsModalProps) {
                   </div>
 
                   <div className="space-y-1">
-                    <span className="text-[10px] font-mono text-slate-400">Priority 2 (Model 2)</span>
+                    <span className="text-[10px] font-mono text-slate-400">Priority 2 (Secondary Model)</span>
                     <div className="flex items-center gap-1.5">
                       <input
                         type="text"
@@ -308,26 +307,6 @@ export function SecretsModal({ isOpen, onClose }: SecretsModalProps) {
                         className="p-1.5 rounded bg-[#0B0F17] border border-[#1E293B] text-slate-400 hover:text-cyan-300 cursor-pointer shrink-0"
                       >
                         {copiedKey === "model_id_2" ? <Check className="w-3 h-3 text-[#10B981]" /> : <Copy className="w-3 h-3 text-slate-400" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-mono text-slate-400">Priority 3 (Model 3)</span>
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="text"
-                        value={bedrockModel3Id}
-                        onChange={(e) => setBedrockModel3Id(e.target.value.trim())}
-                        placeholder="anthropic.claude-sonnet-5"
-                        className="w-full px-2.5 py-1.5 rounded-lg bg-[#0B0F17] border border-[#1E293B] text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-400"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleCopy(bedrockModel3Id, "model_id_3")}
-                        className="p-1.5 rounded bg-[#0B0F17] border border-[#1E293B] text-slate-400 hover:text-cyan-300 cursor-pointer shrink-0"
-                      >
-                        {copiedKey === "model_id_3" ? <Check className="w-3 h-3 text-[#10B981]" /> : <Copy className="w-3 h-3 text-slate-400" />}
                       </button>
                     </div>
                   </div>

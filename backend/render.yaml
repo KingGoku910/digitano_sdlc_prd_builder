@@ -15,5 +15,3 @@ services:
         value: anthropic.claude-sonnet-4-6
       - key: BEDROCK_MODEL_2_ID
         value: anthropic.claude-3-5-sonnet-20241022-v2:0
-      - key: BEDROCK_MODEL_3_ID
-        value: anthropic.claude-sonnet-5

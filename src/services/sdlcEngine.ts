@@ -305,9 +305,10 @@ export async function executeAgentReasoning(
   // Valid AWS IAM Secret Access Keys are always exactly 40 base64 characters
   const secretAccessKey = (rawSecret.length === 40 && rawSecret !== "20un1TmaK/JGV6p6uVKY6gLRejK+4oBySjRr9") ? rawSecret : "";
   const region = (savedSettings.awsRegion || "us-east-1").trim();
-  const modelId = (savedSettings.bedrockModelId || "anthropic.claude-sonnet-4-6").trim();
-  const model2Id = (savedSettings.bedrockModel2Id || "anthropic.claude-3-5-sonnet-20241022-v2:0").trim();
-  const model3Id = (savedSettings.bedrockModel3Id || "anthropic.claude-sonnet-5").trim();
+  const rawModel1 = (savedSettings.bedrockModelId || "anthropic.claude-sonnet-4-6").trim();
+  const modelId = (!rawModel1.includes("sonnet-5") && !rawModel1.includes("20240620")) ? rawModel1 : "anthropic.claude-sonnet-4-6";
+  const rawModel2 = (savedSettings.bedrockModel2Id || "anthropic.claude-3-5-sonnet-20241022-v2:0").trim();
+  const model2Id = !rawModel2.includes("sonnet-5") ? rawModel2 : "anthropic.claude-3-5-sonnet-20241022-v2:0";
   const geminiApiKey = (savedSettings.geminiApiKey || "").trim();
   const geminiApi2Key = (savedSettings.geminiApi2Key || "").trim();
   const geminiApi3Key = (savedSettings.geminiApi3Key || "").trim();
@@ -335,7 +336,6 @@ export async function executeAgentReasoning(
           region,
           modelId,
           model2Id,
-          model3Id,
           geminiApiKey,
           geminiApi2Key,
           geminiApi3Key,

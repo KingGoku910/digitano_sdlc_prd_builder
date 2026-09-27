@@ -320,7 +320,6 @@ async function startServer() {
     // Prioritized Bedrock Models Pool:
     // Model 1: anthropic.claude-sonnet-4-6 (Priority 1)
     // Model 2: anthropic.claude-3-5-sonnet-20241022-v2:0 (Priority 2)
-    // Model 3: anthropic.claude-sonnet-5 (Priority 3)
     const rawModelList: (string | undefined)[] = [
       customCredentials?.modelId,
       process.env.BEDROCK_MODEL_ID,
@@ -328,14 +327,12 @@ async function startServer() {
       customCredentials?.model2Id,
       process.env.BEDROCK_MODEL_2_ID,
       'anthropic.claude-3-5-sonnet-20241022-v2:0',
-      customCredentials?.model3Id,
-      process.env.BEDROCK_MODEL_3_ID,
-      'anthropic.claude-sonnet-5',
     ];
 
     const uniqueBedrockModels = Array.from(
       new Set(
-        rawModelList.filter((m): m is string => typeof m === 'string' && m.trim().length > 0)
+        rawModelList
+          .filter((m): m is string => typeof m === 'string' && m.trim().length > 0 && !m.includes('sonnet-5'))
       )
     );
     const primaryModelId = uniqueBedrockModels[0] || 'anthropic.claude-sonnet-4-6';

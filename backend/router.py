@@ -18,7 +18,6 @@ logging.basicConfig(level=logging.INFO)
 DEFAULT_BEDROCK_MODELS = [
     "anthropic.claude-sonnet-4-6",
     "anthropic.claude-3-5-sonnet-20241022-v2:0",
-    "anthropic.claude-sonnet-5",
 ]
 
 # Google Gemini Flash Models (3.5 or newer)
@@ -35,7 +34,6 @@ class CredentialsModel(BaseModel):
     secretAccessKey: Optional[str] = None
     modelId: Optional[str] = "anthropic.claude-sonnet-4-6"
     model2Id: Optional[str] = "anthropic.claude-3-5-sonnet-20241022-v2:0"
-    model3Id: Optional[str] = "anthropic.claude-sonnet-5"
     geminiApiKey: Optional[str] = None
     geminiApi2Key: Optional[str] = None
     geminiApi3Key: Optional[str] = None
@@ -184,10 +182,9 @@ def execute_agent_task(req: InvokeRequest) -> InvokeResponse:
     bedrock_models = [
         creds.modelId or os.getenv("BEDROCK_MODEL_ID", DEFAULT_BEDROCK_MODELS[0]),
         creds.model2Id or os.getenv("BEDROCK_MODEL_2_ID", DEFAULT_BEDROCK_MODELS[1]),
-        creds.model3Id or os.getenv("BEDROCK_MODEL_3_ID", DEFAULT_BEDROCK_MODELS[2]),
     ]
-    # Unique ordered models
-    unique_models = list(dict.fromkeys([m for m in bedrock_models if m]))
+    # Unique ordered models (filter out any sonnet-5)
+    unique_models = list(dict.fromkeys([m for m in bedrock_models if m and "sonnet-5" not in m]))
     primary_model = unique_models[0] if unique_models else "anthropic.claude-sonnet-4-6"
 
     # Step 1: AWS Bedrock Claude Sonnet Attempt (if valid credentials provided)

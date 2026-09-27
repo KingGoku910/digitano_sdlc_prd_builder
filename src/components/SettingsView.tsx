@@ -16,7 +16,6 @@ const RENDER_ENV_VARS = [
   { key: "DYNAMODB_TABLE_NAME", value: "DigitanoProjects", note: "DynamoDB On-Demand Single-Table name" },
   { key: "BEDROCK_MODEL_ID", value: "anthropic.claude-sonnet-4-6", note: "Primary Reasoning Model (Model 1 Priority)" },
   { key: "BEDROCK_MODEL_2_ID", value: "anthropic.claude-3-5-sonnet-20241022-v2:0", note: "Secondary Reasoning Model (Model 2 Priority)" },
-  { key: "BEDROCK_MODEL_3_ID", value: "anthropic.claude-sonnet-5", note: "Tertiary Reasoning Model (Model 3 Priority)" },
   { key: "GEMINI_API_KEY", value: "AIzaSy...", note: "Google Gemini Flash Failover API Key 1" },
   { key: "GEMINI_API2_KEY", value: "AIzaSy...", note: "Google Gemini Flash Failover API Key 2" },
   { key: "GEMINI_API3_KEY", value: "AIzaSy...", note: "Google Gemini Flash Failover API Key 3" },
@@ -32,7 +31,6 @@ export function SettingsView() {
   const [awsSecretAccessKey, setAwsSecretAccessKey] = useState("");
   const [bedrockModelId, setBedrockModelId] = useState("anthropic.claude-sonnet-4-6");
   const [bedrockModel2Id, setBedrockModel2Id] = useState("anthropic.claude-3-5-sonnet-20241022-v2:0");
-  const [bedrockModel3Id, setBedrockModel3Id] = useState("anthropic.claude-sonnet-5");
   const [geminiApiKey, setGeminiApiKey] = useState("");
   const [geminiApi2Key, setGeminiApi2Key] = useState("");
   const [geminiApi3Key, setGeminiApi3Key] = useState("");
@@ -57,11 +55,12 @@ export function SettingsView() {
         if (parsed.awsSecretAccessKey && parsed.awsSecretAccessKey !== "20un1TmaK/JGV6p6uVKY6gLRejK+4oBySjRr9") {
           setAwsSecretAccessKey(parsed.awsSecretAccessKey);
         }
-        if (parsed.bedrockModelId && !parsed.bedrockModelId.includes("20240620")) {
+        if (parsed.bedrockModelId && !parsed.bedrockModelId.includes("20240620") && !parsed.bedrockModelId.includes("sonnet-5")) {
           setBedrockModelId(parsed.bedrockModelId);
         }
-        if (parsed.bedrockModel2Id) setBedrockModel2Id(parsed.bedrockModel2Id);
-        if (parsed.bedrockModel3Id) setBedrockModel3Id(parsed.bedrockModel3Id);
+        if (parsed.bedrockModel2Id && !parsed.bedrockModel2Id.includes("sonnet-5")) {
+          setBedrockModel2Id(parsed.bedrockModel2Id);
+        }
         if (parsed.geminiApiKey) setGeminiApiKey(parsed.geminiApiKey);
         if (parsed.geminiApi2Key) setGeminiApi2Key(parsed.geminiApi2Key);
         if (parsed.geminiApi3Key) setGeminiApi3Key(parsed.geminiApi3Key);
@@ -96,7 +95,6 @@ export function SettingsView() {
       awsSecretAccessKey,
       bedrockModelId,
       bedrockModel2Id,
-      bedrockModel3Id,
       geminiApiKey,
       geminiApi2Key,
       geminiApi3Key,
@@ -394,21 +392,21 @@ export function SettingsView() {
               </div>
             </div>
 
-            {/* 3 Prioritized Bedrock Claude Sonnet Models */}
+            {/* Prioritized Bedrock Claude Sonnet Models Pool */}
             <div className="sm:col-span-2 space-y-3 pt-2 border-t border-[#1E293B]/70">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono text-cyan-400 font-semibold uppercase tracking-wider">
                   BEDROCK CLAUDE SONNET MODELS (PRIORITIZED POOL)
                 </span>
                 <span className="text-[10px] text-slate-500 font-mono">
-                  Priority 1 &rarr; Priority 2 &rarr; Priority 3
+                  Priority 1 &rarr; Priority 2
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-mono text-slate-400 mb-1">
-                    PRIORITY #1 (MODEL 1)
+                    PRIORITY #1 (PRIMARY MODEL)
                   </label>
                   <input
                     type="text"
@@ -421,26 +419,13 @@ export function SettingsView() {
 
                 <div>
                   <label className="block text-[11px] font-mono text-slate-400 mb-1">
-                    PRIORITY #2 (MODEL 2)
+                    PRIORITY #2 (SECONDARY MODEL)
                   </label>
                   <input
                     type="text"
                     value={bedrockModel2Id}
                     onChange={(e) => setBedrockModel2Id(e.target.value)}
                     placeholder="anthropic.claude-3-5-sonnet-20241022-v2:0"
-                    className="w-full px-3 py-2 rounded-xl bg-[#0B0F17] border border-[#1E293B] text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-400"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-mono text-slate-400 mb-1">
-                    PRIORITY #3 (MODEL 3)
-                  </label>
-                  <input
-                    type="text"
-                    value={bedrockModel3Id}
-                    onChange={(e) => setBedrockModel3Id(e.target.value)}
-                    placeholder="anthropic.claude-sonnet-5"
                     className="w-full px-3 py-2 rounded-xl bg-[#0B0F17] border border-[#1E293B] text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-400"
                   />
                 </div>
