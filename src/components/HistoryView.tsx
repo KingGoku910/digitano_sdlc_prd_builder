@@ -63,7 +63,7 @@ export function HistoryView({ onSelectProject, onNewProject }: HistoryViewProps)
   };
 
   useEffect(() => {
-    const email = getStoredEmail() || "ryno9rossouw@gmail.com";
+    const email = getStoredEmail() || "rynorossouw14@gmail.com";
     setActiveEmail(email);
     loadData(email);
   }, []);

@@ -23,25 +23,28 @@ export interface ProjectRecord {
 }
 
 export function getUserProjectsStorageKey(userEmail?: string): string {
-  const email = (userEmail || getStoredEmail() || "default").toLowerCase().trim();
+  const email = (userEmail || getStoredEmail() || "rynorossouw14@gmail.com").toLowerCase().trim();
   return `digitano_projects_${email}`;
 }
 
 export async function fetchUserProjectsFromDynamoDB(userEmail?: string): Promise<ProjectRecord[]> {
-  const email = (userEmail || getStoredEmail() || "default").toLowerCase().trim();
+  const email = (userEmail || getStoredEmail() || "rynorossouw14@gmail.com").toLowerCase().trim();
 
-  // 1. Fetch from server DynamoDB endpoint
+  // 1. Fetch from server DynamoDB endpoint (queries DynamoDB table & persistent store)
   try {
     const res = await fetch(`/api/projects?email=${encodeURIComponent(email)}`, {
       headers: { "x-user-email": email },
     });
     if (res.ok) {
       const data = await res.json();
-      if (Array.isArray(data.projects) && data.projects.length > 0) {
+      if (Array.isArray(data.projects)) {
         if (typeof window !== "undefined") {
           localStorage.setItem(getUserProjectsStorageKey(email), JSON.stringify(data.projects));
         }
-        return data.projects;
+        // If projects were found in DynamoDB partition, return them
+        if (data.projects.length > 0) {
+          return data.projects;
+        }
       }
     }
   } catch (err) {
@@ -54,17 +57,32 @@ export async function fetchUserProjectsFromDynamoDB(userEmail?: string): Promise
 
 export function loadSavedProjects(userEmail?: string): ProjectRecord[] {
   if (typeof window === "undefined") return [];
-  const email = (userEmail || getStoredEmail() || "default").toLowerCase().trim();
+  const email = (userEmail || getStoredEmail() || "rynorossouw14@gmail.com").toLowerCase().trim();
   try {
     const userKey = getUserProjectsStorageKey(email);
     const raw = localStorage.getItem(userKey);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+
+    // Secondary email alias check (e.g. ryno9rossouw vs rynorossouw14)
+    const aliases = ["rynorossouw14@gmail.com", "ryno9rossouw@gmail.com"];
+    for (const alt of aliases) {
+      if (alt !== email) {
+        const altRaw = localStorage.getItem(getUserProjectsStorageKey(alt));
+        if (altRaw) {
+          const altParsed = JSON.parse(altRaw);
+          if (Array.isArray(altParsed) && altParsed.length > 0) return altParsed;
+        }
+      }
+    }
 
     // Legacy fallback check: if legacy global key exists, return items
     const legacyRaw = localStorage.getItem("digitano_saved_projects");
     if (legacyRaw) {
       const legacyList: ProjectRecord[] = JSON.parse(legacyRaw);
-      return legacyList;
+      if (Array.isArray(legacyList) && legacyList.length > 0) return legacyList;
     }
     return [];
   } catch {
@@ -287,6 +305,8 @@ export async function executeAgentReasoning(
   const region = savedSettings.awsRegion || "us-east-1";
   const modelId = savedSettings.bedrockModelId || "anthropic.claude-3-5-sonnet-20240620-v1:0";
   const geminiApiKey = savedSettings.geminiApiKey || "";
+  const geminiApi2Key = savedSettings.geminiApi2Key || "";
+  const geminiApi3Key = savedSettings.geminiApi3Key || "";
 
   console.group(`🤖 [AI Agent Pipeline] Dispatching: ${agentName} (${agentId || "Agent"})`);
   console.log(`🎯 [Priority #1] AWS Bedrock Claude 3.5 Sonnet (${modelId}) in ${region}`);
@@ -311,6 +331,8 @@ export async function executeAgentReasoning(
           region,
           modelId,
           geminiApiKey,
+          geminiApi2Key,
+          geminiApi3Key,
         },
       }),
     });

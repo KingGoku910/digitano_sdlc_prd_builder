@@ -104,6 +104,12 @@ export default function App() {
   const [dashboardTab, setDashboardTab] = useState<"new_project" | "history" | "settings">("new_project");
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isSecretsModalOpen, setIsSecretsModalOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("digitano_sidebar_minimized") === "true";
+    }
+    return false;
+  });
 
   // Execution state
   const [agents, setAgents] = useState<AgentState[]>(INITIAL_AGENTS);
@@ -399,9 +405,11 @@ export default function App() {
       {/* VIEW 3: FULL DASHBOARD */}
       {currentView === "dashboard" && (
         <div className="relative z-10 flex h-screen overflow-hidden">
-          {/* Left Sidebar */}
+          {/* Left Sidebar (Minimizable to Lucide Icons Only) */}
           <Sidebar
             currentTab={dashboardTab}
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapse={setIsSidebarCollapsed}
             onTabChange={(tab) => {
               setDashboardTab(tab as any);
               if (tab === "new_project" && isFinished) {

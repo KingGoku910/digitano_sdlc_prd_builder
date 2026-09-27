@@ -149,7 +149,28 @@ async function startServer() {
 
     // 2. Load from user partition in local DynamoDB disk store
     if (projects.length === 0) {
-      const userPartition = dynamodbMemoryStore[pk] || {};
+      let userPartition = dynamodbMemoryStore[pk] || {};
+
+      // If specific email partition has no projects, check other user partitions or merge
+      if (Object.keys(userPartition).length === 0) {
+        const aliases = ['rynorossouw14@gmail.com', 'ryno9rossouw@gmail.com'];
+        for (const alt of aliases) {
+          const altPk = `USER#${alt}`;
+          if (dynamodbMemoryStore[altPk] && Object.keys(dynamodbMemoryStore[altPk]).length > 0) {
+            userPartition = { ...userPartition, ...dynamodbMemoryStore[altPk] };
+          }
+        }
+      }
+
+      // If still empty, check all partitions in store
+      if (Object.keys(userPartition).length === 0) {
+        Object.values(dynamodbMemoryStore).forEach((partition) => {
+          if (partition && typeof partition === 'object') {
+            userPartition = { ...userPartition, ...partition };
+          }
+        });
+      }
+
       projects = Object.values(userPartition).sort((a: any, b: any) =>
         new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
       );
@@ -377,58 +398,87 @@ async function startServer() {
     // 2. Automated Failover Layer: Google Gemini Models (ONLY ENGAGED IF BEDROCK FAILS)
     console.warn(`[Failover Dispatch] ⚠️ AWS Bedrock could not be reached or completed. Evaluating sequential failover layer...`);
 
-    const geminiKey = customCredentials?.geminiApiKey || process.env.GEMINI_API_KEY;
-    const isGeminiKeyValidFormat = geminiKey && typeof geminiKey === 'string' && (geminiKey.startsWith('AIzaSy') || (geminiKey.length >= 35 && !geminiKey.startsWith('AQ.')));
+    // Rotate across 3 Gemini API keys with fallback
+    const geminiKeysPool: string[] = [
+      customCredentials?.geminiApiKey,
+      customCredentials?.geminiApi2Key,
+      customCredentials?.geminiApi3Key,
+      process.env.GEMINI_API_KEY,
+      process.env.GEMINI_API2_KEY,
+      process.env.GEMINI_API3_KEY,
+    ].filter(
+      (key): key is string =>
+        typeof key === 'string' &&
+        key.trim().length >= 30 &&
+        !key.startsWith('AQ.') &&
+        key !== 'MY_GEMINI_API_KEY'
+    );
 
-    if (isGeminiKeyValidFormat) {
-      console.log(`[Google Gemini Failover] Attempting sequential failover with verified Google GenAI API Key...`);
-      try {
-        const aiInstance = new GoogleGenAI({ apiKey: geminiKey });
-        const candidateModels = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
-        let geminiRespText = '';
-        let matchedModel = 'gemini-2.5-flash';
+    let geminiSucceeded = false;
 
-        for (const model of candidateModels) {
-          try {
-            console.log(`[Google Gemini Failover] Testing model: ${model}...`);
-            const resp = await aiInstance.models.generateContent({
-              model,
-              contents: prompt,
-              config: {
-                systemInstruction: systemInstruction || undefined,
-                temperature: 0.2
+    if (geminiKeysPool.length > 0) {
+      console.log(`[Google Gemini Failover] Found ${geminiKeysPool.length} valid Gemini API keys in rotation pool. Testing keys in round-robin/sequential rotation...`);
+
+      for (let keyIdx = 0; keyIdx < geminiKeysPool.length; keyIdx++) {
+        const currentKey = geminiKeysPool[keyIdx];
+        const keyLabel = `Key #${keyIdx + 1} (${currentKey.slice(0, 6)}...${currentKey.slice(-4)})`;
+        console.log(`[Google Gemini Failover] 🔑 Attempting with ${keyLabel}...`);
+
+        try {
+          const aiInstance = new GoogleGenAI({ apiKey: currentKey });
+          const candidateModels = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+          let geminiRespText = '';
+          let matchedModel = 'gemini-2.5-flash';
+
+          for (const model of candidateModels) {
+            try {
+              console.log(`[Google Gemini Failover] Testing model: ${model} with ${keyLabel}...`);
+              const resp = await aiInstance.models.generateContent({
+                model,
+                contents: prompt,
+                config: {
+                  systemInstruction: systemInstruction || undefined,
+                  temperature: 0.2
+                }
+              });
+              if (resp?.text) {
+                geminiRespText = resp.text;
+                matchedModel = model;
+                console.log(`[Google Gemini Failover] ✅ Gemini model ${model} SUCCEEDED with ${keyLabel}! Output: ${geminiRespText.length} chars.`);
+                break;
               }
-            });
-            if (resp?.text) {
-              geminiRespText = resp.text;
-              matchedModel = model;
-              console.log(`[Google Gemini Failover] ✅ Gemini model ${model} succeeded with ${geminiRespText.length} characters.`);
-              break;
+            } catch (modelErr: any) {
+              console.warn(`[Google Gemini Failover] Model ${model} failed with ${keyLabel}: ${modelErr.message}`);
+              // If quota or rate limited, try next key in pool immediately
+              if (modelErr?.message?.includes('quota') || modelErr?.message?.includes('RESOURCE_EXHAUSTED') || modelErr?.status === 429) {
+                console.warn(`[Google Gemini Failover] ⚠️ Quota reached for ${keyLabel}. Rotating to next Gemini key in pool...`);
+                break;
+              }
             }
-          } catch (modelErr: any) {
-            console.warn(`[Google Gemini Failover] Model ${model} failed: ${modelErr.message}`);
           }
-        }
 
-        if (geminiRespText) {
-          console.log('==================================================================\n');
-          return res.json({
-            success: true,
-            engine: `Google Gemini (${matchedModel})`,
-            modelName: matchedModel === 'gemini-2.5-flash' ? 'Google Gemini 2.5 Flash' : `Google ${matchedModel}`,
-            modelId: matchedModel,
-            provider: 'Google GenAI API',
-            text: geminiRespText,
-            bedrockAttempted: true,
-            failoverEngaged: true,
-            notes: bedrockError ? `${bedrockError.name}: ${bedrockError.message}` : 'Bedrock credentials unavailable'
-          });
+          if (geminiRespText) {
+            geminiSucceeded = true;
+            console.log('==================================================================\n');
+            return res.json({
+              success: true,
+              engine: `Google Gemini (${matchedModel})`,
+              modelName: matchedModel === 'gemini-2.5-flash' ? 'Google Gemini 2.5 Flash' : `Google ${matchedModel}`,
+              modelId: matchedModel,
+              provider: `Google GenAI API [${keyLabel}]`,
+              text: geminiRespText,
+              bedrockAttempted: true,
+              bedrockSucceeded: false,
+              failoverEngaged: true,
+              notes: bedrockError ? `Bedrock error (${bedrockError.name}): ${bedrockError.message}` : 'Bedrock failover activated'
+            });
+          }
+        } catch (keyErr: any) {
+          console.error(`[Google Gemini Failover] ❌ Error with ${keyLabel}:`, keyErr?.message || keyErr);
         }
-      } catch (geminiErr: any) {
-        console.error(`[Google Gemini Failover] ❌ Gemini failover error:`, geminiErr.message);
       }
     } else {
-      console.log(`[Failover Dispatch] Gemini API key not configured or format invalid (starts with 'AQ.' placeholder). Bypassing Gemini to prevent API error.`);
+      console.log(`[Failover Dispatch] No valid Gemini API keys found in rotation pool. Bypassing Gemini direct API call.`);
     }
 
     // 3. Fallback to Local SDLC Domain Synthesizer Protocol

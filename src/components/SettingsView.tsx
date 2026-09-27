@@ -15,7 +15,9 @@ const RENDER_ENV_VARS = [
   { key: "COGNITO_APP_CLIENT_ID", value: "408ssjnnva8r0p9adutse6q1ht", note: "Cognito App Client ID" },
   { key: "DYNAMODB_TABLE_NAME", value: "DigitanoProjects", note: "DynamoDB On-Demand Single-Table name" },
   { key: "BEDROCK_MODEL_ID", value: "anthropic.claude-3-5-sonnet-20240620-v1:0", note: "Primary Reasoning Model" },
-  { key: "GEMINI_API_KEY", value: "AQ.Ab8RN6IbN3l3eHAnMJLQJHuT0-6k0cSTUk", note: "Google Gemini Flash Failover API key" },
+  { key: "GEMINI_API_KEY", value: "AIzaSy...", note: "Google Gemini Flash Failover API Key 1" },
+  { key: "GEMINI_API2_KEY", value: "AIzaSy...", note: "Google Gemini Flash Failover API Key 2" },
+  { key: "GEMINI_API3_KEY", value: "AIzaSy...", note: "Google Gemini Flash Failover API Key 3" },
 ];
 
 export function SettingsView() {
@@ -27,7 +29,9 @@ export function SettingsView() {
   const [awsAccessKeyId, setAwsAccessKeyId] = useState("AKIA5RURABIWRXNTZAMQ");
   const [awsSecretAccessKey, setAwsSecretAccessKey] = useState("20un1TmaK/JGV6p6uVKY6gLRejK+4oBySjRr9");
   const [bedrockModelId, setBedrockModelId] = useState("anthropic.claude-3-5-sonnet-20240620-v1:0");
-  const [geminiApiKey, setGeminiApiKey] = useState("AQ.Ab8RN6IbN3l3eHAnMJLQJHuT0-6k0cSTUk");
+  const [geminiApiKey, setGeminiApiKey] = useState("");
+  const [geminiApi2Key, setGeminiApi2Key] = useState("");
+  const [geminiApi3Key, setGeminiApi3Key] = useState("");
   const [saved, setSaved] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [copiedAll, setCopiedAll] = useState(false);
@@ -49,6 +53,8 @@ export function SettingsView() {
         if (parsed.awsSecretAccessKey) setAwsSecretAccessKey(parsed.awsSecretAccessKey);
         if (parsed.bedrockModelId) setBedrockModelId(parsed.bedrockModelId);
         if (parsed.geminiApiKey) setGeminiApiKey(parsed.geminiApiKey);
+        if (parsed.geminiApi2Key) setGeminiApi2Key(parsed.geminiApi2Key);
+        if (parsed.geminiApi3Key) setGeminiApi3Key(parsed.geminiApi3Key);
       }
     } catch (e) {
       console.warn("Settings load notice:", e);
@@ -79,7 +85,9 @@ export function SettingsView() {
       awsAccessKeyId,
       awsSecretAccessKey,
       bedrockModelId,
-      geminiApiKey
+      geminiApiKey,
+      geminiApi2Key,
+      geminiApi3Key,
     }));
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
@@ -384,6 +392,59 @@ export function SettingsView() {
                 onChange={(e) => setBedrockModelId(e.target.value)}
                 className="w-full px-3.5 py-2 rounded-xl bg-[#0B0F17] border border-[#1E293B] text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-400"
               />
+            </div>
+
+            {/* 3 Rotated Gemini API Keys */}
+            <div className="sm:col-span-2 space-y-3 pt-2 border-t border-[#1E293B]/70">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-mono text-emerald-400 font-semibold uppercase tracking-wider">
+                  GOOGLE GEMINI FAILOVER API KEYS (3-KEY ROTATION POOL)
+                </span>
+                <span className="text-[10px] text-slate-500 font-mono">
+                  Auto-rotates on quota limits
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] font-mono text-slate-400 mb-1">
+                    GEMINI_API_KEY (Key 1)
+                  </label>
+                  <input
+                    type="password"
+                    value={geminiApiKey}
+                    onChange={(e) => setGeminiApiKey(e.target.value)}
+                    placeholder="AIzaSy... (Key 1)"
+                    className="w-full px-3 py-2 rounded-xl bg-[#0B0F17] border border-[#1E293B] text-xs font-mono text-emerald-300 focus:outline-none focus:border-emerald-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono text-slate-400 mb-1">
+                    GEMINI_API2_KEY (Key 2)
+                  </label>
+                  <input
+                    type="password"
+                    value={geminiApi2Key}
+                    onChange={(e) => setGeminiApi2Key(e.target.value)}
+                    placeholder="AIzaSy... (Key 2)"
+                    className="w-full px-3 py-2 rounded-xl bg-[#0B0F17] border border-[#1E293B] text-xs font-mono text-emerald-300 focus:outline-none focus:border-emerald-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono text-slate-400 mb-1">
+                    GEMINI_API3_KEY (Key 3)
+                  </label>
+                  <input
+                    type="password"
+                    value={geminiApi3Key}
+                    onChange={(e) => setGeminiApi3Key(e.target.value)}
+                    placeholder="AIzaSy... (Key 3)"
+                    className="w-full px-3 py-2 rounded-xl bg-[#0B0F17] border border-[#1E293B] text-xs font-mono text-emerald-300 focus:outline-none focus:border-emerald-400"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 

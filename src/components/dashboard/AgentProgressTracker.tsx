@@ -206,6 +206,16 @@ export function AgentProgressTracker({
                         <span className="text-slate-400 lowercase text-[10px]">
                           {isComplete ? "reasoned by" : "assigned model"}
                         </span>
+                        {/* Primary Bedrock vs Failover Indicator Pill */}
+                        {modelName.includes("Claude") || provider.includes("Bedrock") ? (
+                          <span className="px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-300 border border-purple-800/40 text-[9px] font-mono font-bold">
+                            PRIMARY: AWS BEDROCK
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.2 rounded bg-amber-950/80 text-amber-300 border border-amber-800/40 text-[9px] font-mono font-bold">
+                            FAILOVER LAYER ENGAGED
+                          </span>
+                        )}
                       </div>
                       <div className="text-xs font-bold text-white flex items-center gap-2 mt-0.5">
                         <span className="text-cyan-200">{modelName}</span>

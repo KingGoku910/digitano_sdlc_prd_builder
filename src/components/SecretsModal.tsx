@@ -22,7 +22,9 @@ export function SecretsModal({ isOpen, onClose }: SecretsModalProps) {
   const [clientId, setClientId] = useState(COGNITO_CONFIG.ClientId);
   const [tableName, setTableName] = useState("DigitanoProjects");
   const [backendUrl, setBackendUrl] = useState(API_BASE_URL);
-  const [geminiApiKey, setGeminiApiKey] = useState("AQ.Ab8RN6IbN3l3eHAnMJLQJHuT0-6k0cSTUk");
+  const [geminiApiKey, setGeminiApiKey] = useState("");
+  const [geminiApi2Key, setGeminiApi2Key] = useState("");
+  const [geminiApi3Key, setGeminiApi3Key] = useState("");
 
   useEffect(() => {
     try {
@@ -38,6 +40,8 @@ export function SecretsModal({ isOpen, onClose }: SecretsModalProps) {
         if (parsed.tableName) setTableName(parsed.tableName);
         if (parsed.backendUrl) setBackendUrl(parsed.backendUrl);
         if (parsed.geminiApiKey) setGeminiApiKey(parsed.geminiApiKey);
+        if (parsed.geminiApi2Key) setGeminiApi2Key(parsed.geminiApi2Key);
+        if (parsed.geminiApi3Key) setGeminiApi3Key(parsed.geminiApi3Key);
       }
     } catch (e) {
       console.warn("SecretsModal load warning:", e);
@@ -66,6 +70,8 @@ export function SecretsModal({ isOpen, onClose }: SecretsModalProps) {
         tableName,
         backendUrl,
         geminiApiKey,
+        geminiApi2Key,
+        geminiApi3Key,
       })
     );
     setSavedSuccess(true);
@@ -363,26 +369,73 @@ export function SecretsModal({ isOpen, onClose }: SecretsModalProps) {
                 </div>
               </div>
 
-              {/* Gemini API Key */}
-              <div className="p-3.5 rounded-xl bg-[#131924] border border-[#1E293B] space-y-1.5 sm:col-span-2">
+              {/* Gemini API Keys (3-Key Rotation) */}
+              <div className="p-3.5 rounded-xl bg-[#131924] border border-[#1E293B] space-y-2 sm:col-span-2">
                 <div className="flex items-center justify-between text-xs font-mono text-slate-400">
-                  <span>GEMINI_API_KEY</span>
-                  <span className="text-emerald-400 text-[10px]">Automated Failover Engine</span>
+                  <span className="text-emerald-400 font-semibold">GEMINI FAILOVER KEYS (3-KEY ROTATION POOL)</span>
+                  <span className="text-slate-500 text-[10px]">Rotates on quota error</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type={showAllSecrets ? "text" : "password"}
-                    value={geminiApiKey}
-                    onChange={(e) => setGeminiApiKey(e.target.value.trim())}
-                    className="w-full px-3 py-1.5 rounded-lg bg-[#0B0F17] border border-[#1E293B] text-xs font-mono text-emerald-300 focus:outline-none focus:border-cyan-400"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(geminiApiKey, "gemini_key")}
-                    className="p-1.5 rounded bg-[#0B0F17] border border-[#1E293B] text-slate-400 hover:text-cyan-300 cursor-pointer"
-                  >
-                    {copiedKey === "gemini_key" ? <Check className="w-3.5 h-3.5 text-[#10B981]" /> : <Copy className="w-3.5 h-3.5" />}
-                  </button>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-mono text-slate-400">GEMINI_API_KEY (Key 1)</span>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type={showAllSecrets ? "text" : "password"}
+                        value={geminiApiKey}
+                        onChange={(e) => setGeminiApiKey(e.target.value.trim())}
+                        placeholder="AIzaSy... (Key 1)"
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-[#0B0F17] border border-[#1E293B] text-xs font-mono text-emerald-300 focus:outline-none focus:border-cyan-400"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(geminiApiKey, "gemini_key_1")}
+                        className="p-1.5 rounded bg-[#0B0F17] border border-[#1E293B] text-slate-400 hover:text-cyan-300 cursor-pointer shrink-0"
+                      >
+                        {copiedKey === "gemini_key_1" ? <Check className="w-3 h-3 text-[#10B981]" /> : <Copy className="w-3 h-3 text-slate-400" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-mono text-slate-400">GEMINI_API2_KEY (Key 2)</span>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type={showAllSecrets ? "text" : "password"}
+                        value={geminiApi2Key}
+                        onChange={(e) => setGeminiApi2Key(e.target.value.trim())}
+                        placeholder="AIzaSy... (Key 2)"
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-[#0B0F17] border border-[#1E293B] text-xs font-mono text-emerald-300 focus:outline-none focus:border-cyan-400"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(geminiApi2Key, "gemini_key_2")}
+                        className="p-1.5 rounded bg-[#0B0F17] border border-[#1E293B] text-slate-400 hover:text-cyan-300 cursor-pointer shrink-0"
+                      >
+                        {copiedKey === "gemini_key_2" ? <Check className="w-3 h-3 text-[#10B981]" /> : <Copy className="w-3 h-3 text-slate-400" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-mono text-slate-400">GEMINI_API3_KEY (Key 3)</span>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type={showAllSecrets ? "text" : "password"}
+                        value={geminiApi3Key}
+                        onChange={(e) => setGeminiApi3Key(e.target.value.trim())}
+                        placeholder="AIzaSy... (Key 3)"
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-[#0B0F17] border border-[#1E293B] text-xs font-mono text-emerald-300 focus:outline-none focus:border-cyan-400"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(geminiApi3Key, "gemini_key_3")}
+                        className="p-1.5 rounded bg-[#0B0F17] border border-[#1E293B] text-slate-400 hover:text-cyan-300 cursor-pointer shrink-0"
+                      >
+                        {copiedKey === "gemini_key_3" ? <Check className="w-3 h-3 text-[#10B981]" /> : <Copy className="w-3 h-3 text-slate-400" />}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
