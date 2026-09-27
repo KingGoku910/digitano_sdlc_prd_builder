@@ -16,17 +16,87 @@ import { SettingsView } from "./components/SettingsView";
 import { ExportModal } from "./components/ExportModal";
 import { SecretsModal } from "./components/SecretsModal";
 import { isAuthenticated, logoutUser } from "./config/aws-cognito";
-import { runAgentPipeline, ProjectRecord } from "./services/sdlcEngine";
+import { runAgentPipeline, ProjectRecord, AGENT_SPECS } from "./services/sdlcEngine";
 import { ArrowRight, Zap, Users, Code, Sparkles, FolderGit2, ShieldCheck, KeyRound } from "lucide-react";
 
 const INITIAL_AGENTS: AgentState[] = [
-  { id: "agent_01", name: "Product Owner", tag: "PO", number: "Agent 01", role: "Scope & User Stories", status: "pending", logs: [] },
-  { id: "agent_02", name: "Software Analyst", tag: "SA", number: "Agent 02", role: "System Architecture & Constraints", status: "pending", logs: [] },
-  { id: "agent_03", name: "UI Lead", tag: "UI", number: "Agent 03", role: "Tailwind Design System & Tokens", status: "pending", logs: [] },
-  { id: "agent_04", name: "Backend Lead", tag: "BE", number: "Agent 04", role: "FastAPI Endpoints & DynamoDB", status: "pending", logs: [] },
-  { id: "agent_05", name: "Full Stack", tag: "FS", number: "Agent 05", role: "React Hooks & State Flow", status: "pending", logs: [] },
-  { id: "agent_06", name: "Infra Architect", tag: "IA", number: "Agent 06", role: "AWS Serverless IaC & Render", status: "pending", logs: [] },
-  { id: "agent_07", name: "Scrum Master", tag: "SM", number: "Agent 07", role: "Consolidated PRD & Vibe Prompts", status: "pending", logs: [] },
+  {
+    id: "agent_01",
+    name: "Product Owner",
+    tag: "PO",
+    number: "Agent 01",
+    role: "Scope & User Stories",
+    status: "pending",
+    logs: [],
+    taskHandoff: AGENT_SPECS.agent_01.handoff,
+    modelInfo: AGENT_SPECS.agent_01.defaultModel,
+  },
+  {
+    id: "agent_02",
+    name: "Software Analyst",
+    tag: "SA",
+    number: "Agent 02",
+    role: "System Architecture & Constraints",
+    status: "pending",
+    logs: [],
+    taskHandoff: AGENT_SPECS.agent_02.handoff,
+    modelInfo: AGENT_SPECS.agent_02.defaultModel,
+  },
+  {
+    id: "agent_03",
+    name: "UI Lead",
+    tag: "UI",
+    number: "Agent 03",
+    role: "Tailwind Design System & Tokens",
+    status: "pending",
+    logs: [],
+    taskHandoff: AGENT_SPECS.agent_03.handoff,
+    modelInfo: AGENT_SPECS.agent_03.defaultModel,
+  },
+  {
+    id: "agent_04",
+    name: "Backend Lead",
+    tag: "BE",
+    number: "Agent 04",
+    role: "FastAPI Endpoints & DynamoDB",
+    status: "pending",
+    logs: [],
+    taskHandoff: AGENT_SPECS.agent_04.handoff,
+    modelInfo: AGENT_SPECS.agent_04.defaultModel,
+  },
+  {
+    id: "agent_05",
+    name: "Full Stack",
+    tag: "FS",
+    number: "Agent 05",
+    role: "React Hooks & State Flow",
+    status: "pending",
+    logs: [],
+    taskHandoff: AGENT_SPECS.agent_05.handoff,
+    modelInfo: AGENT_SPECS.agent_05.defaultModel,
+  },
+  {
+    id: "agent_06",
+    name: "Infra Architect",
+    tag: "IA",
+    number: "Agent 06",
+    role: "AWS Serverless IaC & Render",
+    status: "pending",
+    logs: [],
+    taskHandoff: AGENT_SPECS.agent_06.handoff,
+    modelInfo: AGENT_SPECS.agent_06.defaultModel,
+  },
+  {
+    id: "agent_07",
+    name: "Scrum Master",
+    tag: "SM",
+    number: "Agent 07",
+    role: "Consolidated PRD & Vibe Prompts",
+    status: "pending",
+    logs: [],
+    taskHandoff: AGENT_SPECS.agent_07.handoff,
+    modelInfo: AGENT_SPECS.agent_07.defaultModel,
+  },
 ];
 
 export default function App() {
@@ -42,6 +112,7 @@ export default function App() {
   const [isFinished, setIsFinished] = useState(false);
   const [artifacts, setArtifacts] = useState<ArtifactData | null>(null);
   const [currentProjectTitle, setCurrentProjectTitle] = useState("");
+  const [currentPrompt, setCurrentPrompt] = useState("");
 
   // Sync auth state on mount
   useEffect(() => {
@@ -53,6 +124,7 @@ export default function App() {
   const handleStartProject = async (prompt: string, title: string) => {
     const projectId = "proj_" + Math.random().toString(36).substring(2, 9);
     setCurrentProjectTitle(title);
+    setCurrentPrompt(prompt);
     setIsExecuting(true);
     setIsFinished(false);
     setArtifacts(null);
@@ -91,18 +163,31 @@ export default function App() {
 
   const handleSelectHistoryProject = (project: ProjectRecord) => {
     setCurrentProjectTitle(project.title);
+    setCurrentPrompt(project.prompt);
     setArtifacts(project.artifacts);
     setIsFinished(true);
     setIsExecuting(false);
     setCompletedCount(7);
-    setAgents(INITIAL_AGENTS.map((a) => ({
-      ...a,
-      status: "complete",
-      logs: [
-        `01 [${a.tag}] Initialized for ${project.title}...`,
-        `02 [${a.tag}] Specification persisted in DynamoDB table DigitanoProjects.`,
-      ],
-    })));
+    setAgents(INITIAL_AGENTS.map((a) => {
+      let outputText = "";
+      if (a.id === "agent_01") outputText = project.artifacts.prd_document.slice(0, 500) + "...";
+      else if (a.id === "agent_04") outputText = project.artifacts.database_schema.slice(0, 500) + "...";
+      else if (a.id === "agent_05") outputText = project.artifacts.api_contracts.slice(0, 500) + "...";
+      else if (a.id === "agent_07") outputText = project.artifacts.vibe_coder_prompts[0]?.content || "";
+
+      return {
+        ...a,
+        status: "complete",
+        taskHandoff: AGENT_SPECS[a.id]?.handoff,
+        modelInfo: AGENT_SPECS[a.id]?.defaultModel,
+        output: outputText || undefined,
+        logs: [
+          `01 [${a.tag}] Initialized for ${project.title}...`,
+          `02 [${a.tag}] Reasoned with ${AGENT_SPECS[a.id]?.defaultModel.modelName}.`,
+          `03 [${a.tag}] Specification persisted in DynamoDB table DigitanoProjects.`,
+        ],
+      };
+    }));
     setDashboardTab("new_project");
   };
 
@@ -368,6 +453,7 @@ export default function App() {
                         <ArtifactViewer
                           artifacts={artifacts}
                           projectTitle={currentProjectTitle}
+                          userPrompt={currentPrompt}
                         />
                       )}
                     </div>

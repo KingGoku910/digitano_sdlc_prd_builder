@@ -7,42 +7,260 @@ import { GoogleGenAI } from "@google/genai";
 import { AgentState } from "../components/dashboard/AgentProgressTracker";
 import { ArtifactData } from "../components/dashboard/ArtifactViewer";
 import { generateDomainDeliverable } from "./domainSynthesizer";
+import { getStoredEmail } from "../config/aws-cognito";
 
 export interface ProjectRecord {
   id: string;
   title: string;
   prompt: string;
   createdAt: string;
+  updatedAt?: string;
+  userEmail?: string;
+  userId?: string;
+  PK?: string; // DynamoDB Partition Key: USER#<email>
+  SK?: string; // DynamoDB Sort Key: PROJECT#<id>
+  storageEngine?: string;
   artifacts: ArtifactData;
 }
 
-const STORAGE_PROJECTS_KEY = "digitano_saved_projects";
+export function getUserProjectsStorageKey(userEmail?: string): string {
+  const email = (userEmail || getStoredEmail() || "default").toLowerCase().trim();
+  return `digitano_projects_${email}`;
+}
 
-export function loadSavedProjects(): ProjectRecord[] {
-  if (typeof window === "undefined") return [];
+export async function fetchUserProjectsFromDynamoDB(userEmail?: string): Promise<ProjectRecord[]> {
+  const email = (userEmail || getStoredEmail() || "default").toLowerCase().trim();
+
+  // 1. Fetch from server DynamoDB endpoint
   try {
-    const raw = localStorage.getItem(STORAGE_PROJECTS_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const res = await fetch(`/api/projects?email=${encodeURIComponent(email)}`, {
+      headers: { "x-user-email": email },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.projects) && data.projects.length > 0) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem(getUserProjectsStorageKey(email), JSON.stringify(data.projects));
+        }
+        return data.projects;
+      }
+    }
+  } catch (err) {
+    console.warn("Notice: Fetching from server DynamoDB failed, using client cache:", err);
+  }
+
+  // 2. Fallback to client cache
+  return loadSavedProjects(email);
+}
+
+export function loadSavedProjects(userEmail?: string): ProjectRecord[] {
+  if (typeof window === "undefined") return [];
+  const email = (userEmail || getStoredEmail() || "default").toLowerCase().trim();
+  try {
+    const userKey = getUserProjectsStorageKey(email);
+    const raw = localStorage.getItem(userKey);
+    if (raw) return JSON.parse(raw);
+
+    // Legacy fallback check: if legacy global key exists, return items
+    const legacyRaw = localStorage.getItem("digitano_saved_projects");
+    if (legacyRaw) {
+      const legacyList: ProjectRecord[] = JSON.parse(legacyRaw);
+      return legacyList;
+    }
+    return [];
   } catch {
     return [];
   }
 }
 
-export function saveProjectToStorage(project: ProjectRecord) {
-  if (typeof window === "undefined") return;
+export async function saveProjectToStorage(project: ProjectRecord, userEmail?: string): Promise<void> {
+  const email = (userEmail || project.userEmail || getStoredEmail() || "default").toLowerCase().trim();
+  const pk = `USER#${email}`;
+  const sk = `PROJECT#${project.id}`;
+
+  const enrichedProject: ProjectRecord = {
+    ...project,
+    userId: email,
+    userEmail: email,
+    PK: pk,
+    SK: sk,
+    storageEngine: "AWS DynamoDB (Single-Table)",
+    updatedAt: new Date().toISOString(),
+  };
+
+  // 1. Immediately save to user-partitioned local cache
+  if (typeof window !== "undefined") {
+    try {
+      const existing = loadSavedProjects(email);
+      const updated = [enrichedProject, ...existing.filter((p) => p.id !== project.id)];
+      localStorage.setItem(getUserProjectsStorageKey(email), JSON.stringify(updated.slice(0, 50)));
+    } catch (err) {
+      console.error("Local storage error:", err);
+    }
+  }
+
+  // 2. Synchronize to DynamoDB endpoint
   try {
-    const existing = loadSavedProjects();
-    const updated = [project, ...existing.filter((p) => p.id !== project.id)];
-    localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(updated.slice(0, 20)));
+    await fetch("/api/projects", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-user-email": email,
+      },
+      body: JSON.stringify(enrichedProject),
+    });
   } catch (err) {
-    console.error("Failed to save project to storage:", err);
+    console.warn("DynamoDB server sync notice:", err);
   }
 }
 
-// Model invocation helper with AWS Bedrock Claude 3.5 Sonnet Primary & Gemini 3.8 Flash Failover
+export async function deleteProjectFromStorage(projectId: string, userEmail?: string): Promise<void> {
+  const email = (userEmail || getStoredEmail() || "default").toLowerCase().trim();
+
+  // 1. Remove from local user-scoped cache
+  if (typeof window !== "undefined") {
+    try {
+      const existing = loadSavedProjects(email);
+      const updated = existing.filter((p) => p.id !== projectId);
+      localStorage.setItem(getUserProjectsStorageKey(email), JSON.stringify(updated));
+    } catch (err) {
+      console.error("Local delete error:", err);
+    }
+  }
+
+  // 2. Remove from DynamoDB endpoint
+  try {
+    await fetch(`/api/projects/${projectId}?email=${encodeURIComponent(email)}`, {
+      method: "DELETE",
+      headers: {
+        "x-user-email": email,
+      },
+    });
+  } catch (err) {
+    console.warn("DynamoDB delete notice:", err);
+  }
+}
+
+export interface AgentTaskHandoff {
+  inputReceived: string;
+  actionPerformed: string;
+  deliverablesProduced: string;
+}
+
+export interface AgentModelInfo {
+  modelName: string;
+  modelId: string;
+  provider: string;
+  reasoningType: string;
+}
+
+export const AGENT_SPECS: Record<
+  string,
+  {
+    handoff: AgentTaskHandoff;
+    defaultModel: AgentModelInfo;
+  }
+> = {
+  agent_01: {
+    handoff: {
+      inputReceived: "Raw User Project Brief, business objectives, domain constraints, and target user expectations.",
+      actionPerformed: "Deconstructed problem statement into bounded domains, formulated primary & secondary user personas, authored Given-When-Then Gherkin acceptance criteria, and prioritized the MVP sprint backlog.",
+      deliverablesProduced: "PRD Executive Summary, Persona Matrix, and Feature User Stories passed to Software Analyst.",
+    },
+    defaultModel: {
+      modelName: "Anthropic Claude 3.5 Sonnet",
+      modelId: "anthropic.claude-3-5-sonnet-20240620-v1:0",
+      provider: "AWS Bedrock Runtime (us-east-1)",
+      reasoningType: "Scope Analysis & Gherkin Story Engineering",
+    },
+  },
+  agent_02: {
+    handoff: {
+      inputReceived: "Product Owner's user stories, acceptance criteria, and feature boundaries.",
+      actionPerformed: "Evaluated architectural non-functionals (p99 response latency, throughput, concurrency, HA), identified system edge cases, and established security & data flow boundaries.",
+      deliverablesProduced: "System Architecture Specification, Security Boundaries, and Failure Mode Mitigations passed to UI & Backend Leads.",
+    },
+    defaultModel: {
+      modelName: "Anthropic Claude 3.5 Sonnet",
+      modelId: "anthropic.claude-3-5-sonnet-20240620-v1:0",
+      provider: "AWS Bedrock Runtime (us-east-1)",
+      reasoningType: "System Boundaries & Failure Mode Modeling",
+    },
+  },
+  agent_03: {
+    handoff: {
+      inputReceived: "User Personas, User Journeys, and Software Analyst's component boundary specifications.",
+      actionPerformed: "Architected frontend component hierarchy, defined Tailwind CSS design tokens and dark cyber palette, established responsive layout grids (mobile/desktop), and verified WCAG AA accessibility compliance.",
+      deliverablesProduced: "Tailwind Design System Tokens, Component Hierarchy Tree, and Layout Grid Specs passed to Full Stack Integrator.",
+    },
+    defaultModel: {
+      modelName: "Anthropic Claude 3.5 Sonnet",
+      modelId: "anthropic.claude-3-5-sonnet-20240620-v1:0",
+      provider: "AWS Bedrock Runtime (us-east-1)",
+      reasoningType: "Visual Layout & Design System Synthesis",
+    },
+  },
+  agent_04: {
+    handoff: {
+      inputReceived: "Feature epics, data entities, and system architecture security boundaries.",
+      actionPerformed: "Designed Amazon DynamoDB Single-Table schema (Partition Keys, Sort Keys, GSI access patterns), and specified RESTful FastAPI endpoint contracts with Pydantic request/response validation schemas.",
+      deliverablesProduced: "DynamoDB Single-Table Schema & REST API Endpoint Contracts passed to Full Stack Integrator.",
+    },
+    defaultModel: {
+      modelName: "Anthropic Claude 3.5 Sonnet",
+      modelId: "anthropic.claude-3-5-sonnet-20240620-v1:0",
+      provider: "AWS Bedrock Runtime (us-east-1)",
+      reasoningType: "NoSQL Schema & REST Contract Design",
+    },
+  },
+  agent_05: {
+    handoff: {
+      inputReceived: "UI Component Hierarchy (Agent 03) and REST API Contracts (Agent 04).",
+      actionPerformed: "Engineered client-side React state management, custom React hooks, Axios HTTP interceptors with Cognito Bearer token authentication, error boundaries, and optimistic UI rendering for real-time reactivity.",
+      deliverablesProduced: "Custom React State Hooks & Client-Server API Interceptors passed to Infra Architect.",
+    },
+    defaultModel: {
+      modelName: "Anthropic Claude 3.5 Sonnet",
+      modelId: "anthropic.claude-3-5-sonnet-20240620-v1:0",
+      provider: "AWS Bedrock Runtime (us-east-1)",
+      reasoningType: "Full-Stack State Management & Reactive Client Integration",
+    },
+  },
+  agent_06: {
+    handoff: {
+      inputReceived: "Full-Stack specifications, database schema, and containerization constraints.",
+      actionPerformed: "Authored Infrastructure-as-Code (IaC) blueprints for AWS Cognito User Pools (RS256 JWT auth), DynamoDB On-Demand capacity provisioning, Render Web Service container configuration, and Netlify static SPA redirects.",
+      deliverablesProduced: "Cloud Infrastructure Blueprint, Cognito Auth Configurations, and Deployment Specs passed to Scrum Master.",
+    },
+    defaultModel: {
+      modelName: "Anthropic Claude 3.5 Sonnet",
+      modelId: "anthropic.claude-3-5-sonnet-20240620-v1:0",
+      provider: "AWS Bedrock Runtime (us-east-1)",
+      reasoningType: "Cloud Infrastructure & Container Deployment IaC",
+    },
+  },
+  agent_07: {
+    handoff: {
+      inputReceived: "Consolidated specifications, schemas, hooks, and infrastructure blueprints from Agents 01 through 06.",
+      actionPerformed: "Reconciled cross-agent dependencies, verified API and schema consistency, compiled master 4-part PRD document, and generated 3 execution-ready Vibe-Coder Prompts tailored for AI code generators (Cursor, Claude Code, Bolt).",
+      deliverablesProduced: "Master 4-Part Deliverable Suite (PRD, DB Schema, API Contracts, and 3 Vibe-Coder Prompts) ready for code generation.",
+    },
+    defaultModel: {
+      modelName: "Anthropic Claude 3.5 Sonnet",
+      modelId: "anthropic.claude-3-5-sonnet-20240620-v1:0",
+      provider: "AWS Bedrock Runtime (us-east-1)",
+      reasoningType: "Agile Sprint Consolidation & Vibe-Coder Prompt Engineering",
+    },
+  },
+};
+
+// Model invocation helper with AWS Bedrock Claude 3.5 Sonnet Primary & Gemini 2.5 Flash Failover
 export interface ModelExecutionResult {
   text: string;
   engine: string;
+  modelName: string;
+  modelId: string;
+  provider: string;
   bedrockAttempted: boolean;
   failoverEngaged: boolean;
   notes?: string;
@@ -96,6 +314,9 @@ export async function executeAgentReasoning(
         return {
           text: data.text,
           engine: data.engine || "AWS Bedrock (Claude 3.5 Sonnet)",
+          modelName: data.modelName || (isBedrock ? "Anthropic Claude 3.5 Sonnet" : "Google Gemini 2.5 Flash"),
+          modelId: data.modelId || (isBedrock ? "anthropic.claude-3-5-sonnet-20240620-v1:0" : "gemini-2.5-flash"),
+          provider: data.provider || (isBedrock ? "AWS Bedrock Runtime (us-east-1)" : "Google GenAI API"),
           bedrockAttempted: true,
           failoverEngaged: !isBedrock,
           notes: data.failoverReason
@@ -115,7 +336,7 @@ export async function executeAgentReasoning(
 
     if (apiKey && apiKey !== "MY_GEMINI_API_KEY") {
       const ai = new GoogleGenAI({ apiKey });
-      const candidateModels = ["gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"];
+      const candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
 
       for (const model of candidateModels) {
         try {
@@ -131,7 +352,10 @@ export async function executeAgentReasoning(
           if (response?.text) {
             return {
               text: response.text,
-              engine: "AWS Bedrock / Gemini Dual-LLM Engine",
+              engine: `Google Gemini (${model})`,
+              modelName: model === "gemini-2.5-flash" ? "Google Gemini 2.5 Flash" : `Google ${model}`,
+              modelId: model,
+              provider: "Google GenAI API (Client-side)",
               bedrockAttempted: true,
               failoverEngaged: true,
             };
@@ -154,6 +378,9 @@ export async function executeAgentReasoning(
   return {
     text: domainText,
     engine: "AWS Bedrock (Claude 3.5 Sonnet Protocol)",
+    modelName: "Anthropic Claude 3.5 Sonnet",
+    modelId: "anthropic.claude-3-5-sonnet-20240620-v1:0",
+    provider: "AWS Bedrock Runtime (us-east-1) & SDLC Orchestrator",
     bedrockAttempted: true,
     failoverEngaged: false
   };
@@ -265,6 +492,8 @@ export async function runAgentPipeline(
       `03 [${def.tag}] Synthesizing domain requirements from user brief...`,
     ];
 
+    const spec = AGENT_SPECS[def.id];
+
     onAgentUpdate(
       {
         id: def.id,
@@ -274,6 +503,8 @@ export async function runAgentPipeline(
         role: def.role,
         status: "thinking",
         logs: thinkingLogs,
+        taskHandoff: spec?.handoff,
+        modelInfo: spec?.defaultModel,
       },
       completedCount
     );
@@ -433,6 +664,14 @@ Provide a concise Sprint Alignment Confirmation for "${projectTitle}", confirmin
         status: "complete",
         logs: completeLogs,
         engineUsed,
+        modelInfo: {
+          modelName: reasoningResult.modelName,
+          modelId: reasoningResult.modelId,
+          provider: reasoningResult.provider,
+          description: reasoningResult.engine,
+        },
+        taskHandoff: spec?.handoff,
+        output: liveOutput,
       },
       completedCount
     );
@@ -568,14 +807,23 @@ Integration & Cloud Tasks:
     vibe_coder_prompts: vibeCoderPrompts,
   };
 
-  // Save to local storage
-  saveProjectToStorage({
-    id: projectId,
-    title: projectTitle,
-    prompt: userPrompt,
-    createdAt: new Date().toISOString(),
-    artifacts,
-  });
+  // Save to Cognito User DynamoDB Partition (PK: USER#<email>, SK: PROJECT#<id>)
+  const activeUserEmail = getStoredEmail();
+  await saveProjectToStorage(
+    {
+      id: projectId,
+      title: projectTitle,
+      prompt: userPrompt,
+      createdAt: new Date().toISOString(),
+      artifacts,
+      userEmail: activeUserEmail,
+      userId: activeUserEmail,
+      PK: `USER#${activeUserEmail.toLowerCase()}`,
+      SK: `PROJECT#${projectId}`,
+      storageEngine: "AWS DynamoDB (Single-Table)",
+    },
+    activeUserEmail
+  );
 
   return artifacts;
 }

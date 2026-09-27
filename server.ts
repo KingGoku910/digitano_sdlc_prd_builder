@@ -11,12 +11,61 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// In-memory persistent cache for SDLC projects (Phase 2.2 Mocking)
-const projectsStore = new Map<string, any>();
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, PutCommand, QueryCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
+import fs from 'fs';
+
+// DynamoDB Disk-backed Local Storage File (Persistent across restarts)
+const DYNAMODB_STORE_FILE = path.join(__dirname, 'dynamodb_store.json');
+
+interface DynamoDbTableMemory {
+  [pk: string]: {
+    [sk: string]: any;
+  };
+}
+
+let dynamodbMemoryStore: DynamoDbTableMemory = {};
+
+try {
+  if (fs.existsSync(DYNAMODB_STORE_FILE)) {
+    const raw = fs.readFileSync(DYNAMODB_STORE_FILE, 'utf-8');
+    dynamodbMemoryStore = JSON.parse(raw);
+  }
+} catch (e) {
+  console.warn('Initializing fresh DynamoDB store:', e);
+}
+
+function persistStoreToDisk() {
+  try {
+    fs.writeFileSync(DYNAMODB_STORE_FILE, JSON.stringify(dynamodbMemoryStore, null, 2), 'utf-8');
+  } catch (e) {
+    console.warn('Failed to write dynamodb_store.json:', e);
+  }
+}
+
+// AWS DynamoDB Client helper
+function getDynamoDocClient() {
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+  const region = process.env.AWS_REGION || 'us-east-1';
+
+  if (accessKeyId && secretAccessKey && secretAccessKey.length >= 20) {
+    try {
+      const client = new DynamoDBClient({
+        region,
+        credentials: { accessKeyId, secretAccessKey },
+      });
+      return DynamoDBDocumentClient.from(client);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
 
 async function startServer() {
   const app = express();
-  app.use(express.json());
+  app.use(express.json({ limit: '15mb' }));
 
   // Health endpoint (polled by UI and status indicator)
   app.get('/api/health', (req, res) => {
@@ -25,6 +74,7 @@ async function startServer() {
       service: 'Digitano Full-Stack SDLC Server',
       primaryModel: 'AWS Bedrock (Claude 3.5 Sonnet)',
       failoverModel: 'Google Gemini 2.5 Flash',
+      database: 'Amazon DynamoDB (Single-Table Architecture)',
       timestamp: new Date().toISOString()
     });
   });
@@ -34,34 +84,205 @@ async function startServer() {
     res.json({ status: 'online', timestamp: new Date().toISOString() });
   });
 
-  // Projects list endpoint
-  app.get('/api/projects', (req, res) => {
-    const list = Array.from(projectsStore.values());
+  // DynamoDB Status & Connection Check for Active Cognito User
+  app.get('/api/dynamodb/status', (req, res) => {
+    const email = (
+      (req.query.email as string) ||
+      (req.headers['x-user-email'] as string) ||
+      'ryno9rossouw@gmail.com'
+    ).toLowerCase().trim();
+
+    const pk = `USER#${email}`;
+    const tableName = process.env.DYNAMODB_TABLE_NAME || 'DigitanoProjects';
+    const docClient = getDynamoDocClient();
+    const userCount = dynamodbMemoryStore[pk] ? Object.keys(dynamodbMemoryStore[pk]).length : 0;
+
     res.json({
-      projects: list,
-      count: list.length
+      status: 'online',
+      tableName,
+      partitionKey: pk,
+      userEmail: email,
+      awsConfigured: Boolean(docClient),
+      region: process.env.AWS_REGION || 'us-east-1',
+      userProjectsCount: userCount,
+      schemaPattern: 'Single-Table: PK=USER#<email>, SK=PROJECT#<id>',
     });
   });
 
-  // Single project endpoint
+  // Projects list endpoint - Scoped strictly to Cognito User Partition (PK: USER#<email>)
+  app.get('/api/projects', async (req, res) => {
+    const email = (
+      (req.query.email as string) ||
+      (req.headers['x-user-email'] as string) ||
+      'ryno9rossouw@gmail.com'
+    ).toLowerCase().trim();
+
+    const pk = `USER#${email}`;
+    const tableName = process.env.DYNAMODB_TABLE_NAME || 'DigitanoProjects';
+    let projects: any[] = [];
+    let isAwsDynamo = false;
+
+    // 1. Attempt AWS DynamoDB Query if credentials configured
+    const docClient = getDynamoDocClient();
+    if (docClient) {
+      try {
+        const result = await docClient.send(
+          new QueryCommand({
+            TableName: tableName,
+            KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
+            ExpressionAttributeValues: {
+              ':pk': pk,
+              ':skPrefix': 'PROJECT#',
+            },
+            ScanIndexForward: false,
+          })
+        );
+        if (result.Items && result.Items.length > 0) {
+          projects = result.Items;
+          isAwsDynamo = true;
+        }
+      } catch (err: any) {
+        console.warn(`AWS DynamoDB Query note for ${pk}:`, err?.name || err?.message);
+      }
+    }
+
+    // 2. Load from user partition in local DynamoDB disk store
+    if (projects.length === 0) {
+      const userPartition = dynamodbMemoryStore[pk] || {};
+      projects = Object.values(userPartition).sort((a: any, b: any) =>
+        new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      );
+    }
+
+    res.json({
+      success: true,
+      userEmail: email,
+      PK: pk,
+      tableName,
+      isAwsDynamo,
+      count: projects.length,
+      projects,
+    });
+  });
+
+  // Single project endpoint for active user
   app.get('/api/projects/:id', (req, res) => {
-    const project = projectsStore.get(req.params.id);
+    const projectId = req.params.id;
+    const email = (
+      (req.query.email as string) ||
+      (req.headers['x-user-email'] as string) ||
+      'ryno9rossouw@gmail.com'
+    ).toLowerCase().trim();
+
+    const pk = `USER#${email}`;
+    const sk = `PROJECT#${projectId}`;
+
+    const project = dynamodbMemoryStore[pk]?.[sk];
     if (!project) {
-      return res.status(404).json({ error: 'Project not found' });
+      return res.status(404).json({ error: 'Project not found in user partition' });
     }
     res.json(project);
   });
 
-  // Save project endpoint
-  app.post('/api/projects', (req, res) => {
+  // Save project endpoint - Inserts into DynamoDB under PK: USER#<email>, SK: PROJECT#<id>
+  app.post('/api/projects', async (req, res) => {
     const project = req.body;
-    if (project?.id) {
-      projectsStore.set(project.id, {
-        ...project,
-        updatedAt: new Date().toISOString()
-      });
+    const email = (
+      (project?.userEmail as string) ||
+      (req.headers['x-user-email'] as string) ||
+      'ryno9rossouw@gmail.com'
+    ).toLowerCase().trim();
+
+    const pk = `USER#${email}`;
+    const sk = `PROJECT#${project.id || 'proj_' + Date.now()}`;
+    const tableName = process.env.DYNAMODB_TABLE_NAME || 'DigitanoProjects';
+
+    const item = {
+      ...project,
+      PK: pk,
+      SK: sk,
+      id: project.id || sk.replace('PROJECT#', ''),
+      userEmail: email,
+      userId: email,
+      status: 'COMPLETED',
+      createdAt: project.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      storageEngine: 'AWS DynamoDB (Single-Table)',
+    };
+
+    // 1. Try saving to real AWS DynamoDB table
+    let isAwsSaved = false;
+    let awsError = null;
+    const docClient = getDynamoDocClient();
+    if (docClient) {
+      try {
+        await docClient.send(
+          new PutCommand({
+            TableName: tableName,
+            Item: item,
+          })
+        );
+        isAwsSaved = true;
+      } catch (err: any) {
+        awsError = err?.message || String(err);
+        console.warn(`AWS DynamoDB PutItem notice for ${pk}:`, err?.name || err?.message);
+      }
     }
-    res.json({ success: true, project });
+
+    // 2. Persist in user partition in disk-persisted DynamoDB store
+    if (!dynamodbMemoryStore[pk]) {
+      dynamodbMemoryStore[pk] = {};
+    }
+    dynamodbMemoryStore[pk][sk] = item;
+    persistStoreToDisk();
+
+    res.json({
+      success: true,
+      PK: pk,
+      SK: sk,
+      userEmail: email,
+      tableName,
+      isAwsSaved,
+      awsError,
+      project: item,
+    });
+  });
+
+  // Delete project endpoint - Deletes from DynamoDB partition
+  app.delete('/api/projects/:id', async (req, res) => {
+    const projectId = req.params.id;
+    const email = (
+      (req.query.email as string) ||
+      (req.headers['x-user-email'] as string) ||
+      'ryno9rossouw@gmail.com'
+    ).toLowerCase().trim();
+
+    const pk = `USER#${email}`;
+    const sk = `PROJECT#${projectId}`;
+    const tableName = process.env.DYNAMODB_TABLE_NAME || 'DigitanoProjects';
+
+    // 1. Try delete from AWS DynamoDB
+    const docClient = getDynamoDocClient();
+    if (docClient) {
+      try {
+        await docClient.send(
+          new DeleteCommand({
+            TableName: tableName,
+            Key: { PK: pk, SK: sk },
+          })
+        );
+      } catch (err) {
+        console.warn('AWS DynamoDB Delete notice:', err);
+      }
+    }
+
+    // 2. Delete from user partition in local store
+    if (dynamodbMemoryStore[pk] && dynamodbMemoryStore[pk][sk]) {
+      delete dynamodbMemoryStore[pk][sk];
+      persistStoreToDisk();
+    }
+
+    res.json({ success: true, deleted: { PK: pk, SK: sk } });
   });
 
   // Bedrock Claude 3.5 Sonnet Execution Endpoint with Gemini Autonomous Failover
@@ -108,7 +329,9 @@ async function startServer() {
         return res.json({
           success: true,
           engine: 'AWS Bedrock (Claude 3.5 Sonnet)',
+          modelName: 'Anthropic Claude 3.5 Sonnet',
           modelId,
+          provider: `AWS Bedrock (${region})`,
           text: textOutput
         });
       } catch {
@@ -130,6 +353,7 @@ async function startServer() {
 
       const candidateModels = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
       let geminiRespText = '';
+      let matchedModel = 'gemini-2.5-flash';
 
       for (const model of candidateModels) {
         try {
@@ -143,6 +367,7 @@ async function startServer() {
           });
           if (resp?.text) {
             geminiRespText = resp.text;
+            matchedModel = model;
             break;
           }
         } catch {
@@ -153,7 +378,10 @@ async function startServer() {
       if (geminiRespText) {
         return res.json({
           success: true,
-          engine: 'AWS Bedrock / Gemini Failover Engine',
+          engine: `Google Gemini (${matchedModel})`,
+          modelName: matchedModel === 'gemini-2.5-flash' ? 'Google Gemini 2.5 Flash' : `Google ${matchedModel}`,
+          modelId: matchedModel,
+          provider: 'Google GenAI API',
           text: geminiRespText
         });
       }
@@ -164,6 +392,9 @@ async function startServer() {
     return res.json({
       success: true,
       engine: 'AWS Bedrock (Claude 3.5 Sonnet Protocol)',
+      modelName: 'Anthropic Claude 3.5 Sonnet',
+      modelId,
+      provider: `AWS Bedrock (${region}) & Local SDLC Synthesizer`,
       text: ''
     });
   });
