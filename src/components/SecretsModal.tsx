@@ -15,7 +15,7 @@ export function SecretsModal({ isOpen, onClose }: SecretsModalProps) {
 
   // Editable fields
   const [awsAccessKeyId, setAwsAccessKeyId] = useState("AKIA5RURABIWRXNTZAMQ");
-  const [awsSecretAccessKey, setAwsSecretAccessKey] = useState("20un1TmaK/JGV6p6uVKY6gLRejK+4oBySjRr9");
+  const [awsSecretAccessKey, setAwsSecretAccessKey] = useState("");
   const [awsRegion, setAwsRegion] = useState("us-east-1");
   const [bedrockModelId, setBedrockModelId] = useState("anthropic.claude-3-5-sonnet-20240620-v1:0");
   const [userPoolId, setUserPoolId] = useState(COGNITO_CONFIG.UserPoolId);
@@ -32,7 +32,9 @@ export function SecretsModal({ isOpen, onClose }: SecretsModalProps) {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed.awsAccessKeyId) setAwsAccessKeyId(parsed.awsAccessKeyId);
-        if (parsed.awsSecretAccessKey) setAwsSecretAccessKey(parsed.awsSecretAccessKey);
+        if (parsed.awsSecretAccessKey && parsed.awsSecretAccessKey !== "20un1TmaK/JGV6p6uVKY6gLRejK+4oBySjRr9") {
+          setAwsSecretAccessKey(parsed.awsSecretAccessKey);
+        }
         if (parsed.awsRegion) setAwsRegion(parsed.awsRegion);
         if (parsed.bedrockModelId) setBedrockModelId(parsed.bedrockModelId);
         if (parsed.userPoolId) setUserPoolId(parsed.userPoolId);

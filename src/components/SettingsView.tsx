@@ -10,7 +10,7 @@ const RENDER_ENV_VARS = [
   { key: "NEXT_PUBLIC_COGNITO_APP_CLIENT_ID", value: "408ssjnnva8r0p9adutse6q1ht", note: "Cognito App Client ID (USER_PASSWORD_AUTH)" },
   { key: "AWS_REGION", value: "us-east-1", note: "Primary AWS deployment region" },
   { key: "AWS_ACCESS_KEY_ID", value: "AKIA5RURABIWRXNTZAMQ", note: "Boto3 IAM credential for Bedrock & DynamoDB" },
-  { key: "AWS_SECRET_ACCESS_KEY", value: "20un1TmaK/JGV6p6uVKY6gLRejK+4oBySjRr9", note: "AWS IAM secret key" },
+  { key: "AWS_SECRET_ACCESS_KEY", value: "Enter 40-character AWS Secret Key", note: "AWS IAM secret key (40 chars)" },
   { key: "COGNITO_USER_POOL_ID", value: "us-east-1_Gx1XLOLRJ", note: "Cognito User Pool ID for JWKS validation" },
   { key: "COGNITO_APP_CLIENT_ID", value: "408ssjnnva8r0p9adutse6q1ht", note: "Cognito App Client ID" },
   { key: "DYNAMODB_TABLE_NAME", value: "DigitanoProjects", note: "DynamoDB On-Demand Single-Table name" },
@@ -27,7 +27,7 @@ export function SettingsView() {
   const [tableName, setTableName] = useState("DigitanoProjects");
   const [backendUrl, setBackendUrl] = useState(API_BASE_URL);
   const [awsAccessKeyId, setAwsAccessKeyId] = useState("AKIA5RURABIWRXNTZAMQ");
-  const [awsSecretAccessKey, setAwsSecretAccessKey] = useState("20un1TmaK/JGV6p6uVKY6gLRejK+4oBySjRr9");
+  const [awsSecretAccessKey, setAwsSecretAccessKey] = useState("");
   const [bedrockModelId, setBedrockModelId] = useState("anthropic.claude-3-5-sonnet-20240620-v1:0");
   const [geminiApiKey, setGeminiApiKey] = useState("");
   const [geminiApi2Key, setGeminiApi2Key] = useState("");
@@ -50,7 +50,9 @@ export function SettingsView() {
         if (parsed.tableName) setTableName(parsed.tableName);
         if (parsed.backendUrl) setBackendUrl(parsed.backendUrl);
         if (parsed.awsAccessKeyId) setAwsAccessKeyId(parsed.awsAccessKeyId);
-        if (parsed.awsSecretAccessKey) setAwsSecretAccessKey(parsed.awsSecretAccessKey);
+        if (parsed.awsSecretAccessKey && parsed.awsSecretAccessKey !== "20un1TmaK/JGV6p6uVKY6gLRejK+4oBySjRr9") {
+          setAwsSecretAccessKey(parsed.awsSecretAccessKey);
+        }
         if (parsed.bedrockModelId) setBedrockModelId(parsed.bedrockModelId);
         if (parsed.geminiApiKey) setGeminiApiKey(parsed.geminiApiKey);
         if (parsed.geminiApi2Key) setGeminiApi2Key(parsed.geminiApi2Key);

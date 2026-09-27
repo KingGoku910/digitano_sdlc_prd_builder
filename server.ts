@@ -311,10 +311,12 @@ async function startServer() {
   app.post('/api/bedrock/invoke', async (req, res) => {
     const { prompt, systemInstruction, customCredentials, agentName, agentId } = req.body;
 
-    const region = customCredentials?.region || process.env.AWS_REGION || 'us-east-1';
-    const accessKeyId = customCredentials?.accessKeyId || process.env.AWS_ACCESS_KEY_ID || 'AKIA5RURABIWRXNTZAMQ';
-    const secretAccessKey = customCredentials?.secretAccessKey || process.env.AWS_SECRET_ACCESS_KEY || '20un1TmaK/JGV6p6uVKY6gLRejK+4oBySjRr9';
-    const modelId = customCredentials?.modelId || process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20240620-v1:0';
+    const region = (customCredentials?.region || process.env.AWS_REGION || 'us-east-1').trim();
+    const accessKeyId = (customCredentials?.accessKeyId || process.env.AWS_ACCESS_KEY_ID || 'AKIA5RURABIWRXNTZAMQ').trim();
+    const rawSecret = (customCredentials?.secretAccessKey || process.env.AWS_SECRET_ACCESS_KEY || '').trim();
+    // AWS IAM Secret Access Keys must be exactly 40 base64 characters; discard incomplete/invalid defaults
+    const secretAccessKey = (rawSecret.length === 40 && rawSecret !== '20un1TmaK/JGV6p6uVKY6gLRejK+4oBySjRr9') ? rawSecret : '';
+    const modelId = (customCredentials?.modelId || process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20240620-v1:0').trim();
 
     console.log('\n==================== [AI AGENT TASK DISPATCH] ====================');
     console.log(`[Bedrock Dispatch] 🤖 Target Agent: ${agentName || 'Agent'} (${agentId || 'id'})`);
@@ -323,13 +325,21 @@ async function startServer() {
     console.log(`[Bedrock Config] Model ID: ${modelId}`);
     console.log(`[Bedrock Config] Region: ${region}`);
     console.log(`[Bedrock Config] Access Key ID: ${accessKeyId ? accessKeyId.slice(0, 4) + '...' + accessKeyId.slice(-4) : 'NONE'}`);
-    console.log(`[Bedrock Config] Secret Key Length: ${secretAccessKey ? secretAccessKey.length + ' chars' : '0 chars'}`);
+    console.log(`[Bedrock Config] Secret Key Length: ${secretAccessKey ? '40 chars (valid)' : `${rawSecret.length} chars (pending valid 40-char key)`}`);
     console.log(`[Bedrock Config] Prompt Character Count: ${prompt?.length || 0}`);
 
     let bedrockError: any = null;
 
     // 1. Attempt AWS Bedrock Claude 3.5 Sonnet (EXCLUSIVELY FIRST - NO PARALLEL GEMINI CALL)
-    if (accessKeyId && secretAccessKey && secretAccessKey.length >= 10) {
+    // Only dispatch to Bedrock if credentials strictly conform to AWS IAM key specifications (20 chars / 40 chars)
+    const hasValidAwsCredentials = Boolean(
+      accessKeyId &&
+      accessKeyId.length >= 16 &&
+      secretAccessKey &&
+      secretAccessKey.length === 40
+    );
+
+    if (hasValidAwsCredentials) {
       try {
         console.log(`[Bedrock Execution] 🚀 Initializing BedrockRuntimeClient and dispatching InvokeModelCommand...`);
         const client = new BedrockRuntimeClient({
@@ -381,22 +391,17 @@ async function startServer() {
         });
       } catch (err: any) {
         bedrockError = err;
-        console.error(`[Bedrock Execution] ❌ AWS BEDROCK INVOCATION FAILED!`);
-        console.error(`[Bedrock Execution] Error Name: ${err.name}`);
-        console.error(`[Bedrock Execution] Error Message: ${err.message}`);
-        if (err.$metadata) {
-          console.error(`[Bedrock Execution] HTTP Status Code: ${err.$metadata.httpStatusCode}`);
-        }
+        console.warn(`[Bedrock Invocation Note] AWS Bedrock call returned ${err.name || 'Error'}: ${err.message}`);
         if (err.name === 'InvalidSignatureException') {
-          console.warn(`[Bedrock Diagnostic] ⚠️ Signature mismatch: The provided AWS Secret Access Key (${secretAccessKey.length} chars) was rejected by AWS IAM signature verification.`);
+          console.warn(`[Bedrock Diagnostic] ⚠️ Signature mismatch: Please check that the AWS IAM Secret Access Key is active and correct in Settings.`);
         }
       }
     } else {
-      console.warn(`[Bedrock Execution] ⚠️ Skipped: Access Key or Secret Key missing or insufficient length.`);
+      console.log(`[Bedrock Execution] ℹ️ AWS IAM credentials pending full 40-character secret key. Seamlessly engaging autonomous failover layer...`);
     }
 
     // 2. Automated Failover Layer: Google Gemini Models (ONLY ENGAGED IF BEDROCK FAILS)
-    console.warn(`[Failover Dispatch] ⚠️ AWS Bedrock could not be reached or completed. Evaluating sequential failover layer...`);
+    console.log(`[Failover Dispatch] 🔄 Bedrock not available. Evaluating sequential failover layer...`);
 
     // Rotate across 3 Gemini API keys with fallback
     const geminiKeysPool: string[] = [

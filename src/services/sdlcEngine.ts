@@ -300,18 +300,20 @@ export async function executeAgentReasoning(
     // defaults
   }
 
-  const accessKeyId = savedSettings.awsAccessKeyId || "AKIA5RURABIWRXNTZAMQ";
-  const secretAccessKey = savedSettings.awsSecretAccessKey || "20un1TmaK/JGV6p6uVKY6gLRejK+4oBySjRr9";
-  const region = savedSettings.awsRegion || "us-east-1";
-  const modelId = savedSettings.bedrockModelId || "anthropic.claude-3-5-sonnet-20240620-v1:0";
-  const geminiApiKey = savedSettings.geminiApiKey || "";
-  const geminiApi2Key = savedSettings.geminiApi2Key || "";
-  const geminiApi3Key = savedSettings.geminiApi3Key || "";
+  const accessKeyId = (savedSettings.awsAccessKeyId || "AKIA5RURABIWRXNTZAMQ").trim();
+  const rawSecret = (savedSettings.awsSecretAccessKey || "").trim();
+  // Valid AWS IAM Secret Access Keys are always exactly 40 base64 characters
+  const secretAccessKey = (rawSecret.length === 40 && rawSecret !== "20un1TmaK/JGV6p6uVKY6gLRejK+4oBySjRr9") ? rawSecret : "";
+  const region = (savedSettings.awsRegion || "us-east-1").trim();
+  const modelId = (savedSettings.bedrockModelId || "anthropic.claude-3-5-sonnet-20240620-v1:0").trim();
+  const geminiApiKey = (savedSettings.geminiApiKey || "").trim();
+  const geminiApi2Key = (savedSettings.geminiApi2Key || "").trim();
+  const geminiApi3Key = (savedSettings.geminiApi3Key || "").trim();
 
   console.group(`🤖 [AI Agent Pipeline] Dispatching: ${agentName} (${agentId || "Agent"})`);
   console.log(`🎯 [Priority #1] AWS Bedrock Claude 3.5 Sonnet (${modelId}) in ${region}`);
-  console.log(`🔑 [AWS Credentials] AccessKey: ${accessKeyId ? accessKeyId.slice(0, 4) + "..." + accessKeyId.slice(-4) : "NONE"}, SecretKey Length: ${secretAccessKey.length} chars`);
-  console.log(`📡 [Dispatch] Firing exclusive primary request to /api/bedrock/invoke (NO PARALLEL GEMINI CALL)...`);
+  console.log(`🔑 [AWS Credentials] AccessKey: ${accessKeyId ? accessKeyId.slice(0, 4) + "..." + accessKeyId.slice(-4) : "NONE"}, SecretKey: ${secretAccessKey ? "40 chars (valid format)" : `${rawSecret.length} chars (pending full 40-char key)`}`);
+  console.log(`📡 [Dispatch] Firing request to /api/bedrock/invoke...`);
 
   // 1. PRIMARY ATTEMPT: AWS Bedrock (Claude 3.5 Sonnet) via server endpoint
   try {
