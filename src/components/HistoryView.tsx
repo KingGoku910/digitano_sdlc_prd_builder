@@ -29,7 +29,7 @@ interface HistoryViewProps {
 
 export function HistoryView({ onSelectProject, onNewProject }: HistoryViewProps) {
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
-  const [activeEmail, setActiveEmail] = useState<string>("ryno9rossouw@gmail.com");
+  const [activeEmail, setActiveEmail] = useState<string>(() => getStoredEmail());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [dynamoStatus, setDynamoStatus] = useState<{
     tableName: string;
@@ -63,7 +63,7 @@ export function HistoryView({ onSelectProject, onNewProject }: HistoryViewProps)
   };
 
   useEffect(() => {
-    const email = getStoredEmail() || "rynorossouw14@gmail.com";
+    const email = getStoredEmail();
     setActiveEmail(email);
     loadData(email);
   }, []);

@@ -73,8 +73,8 @@ async function startServer() {
     res.json({
       status: 'online',
       service: 'Digitano Full-Stack SDLC Server',
-      primaryModel: 'AWS Bedrock (Claude 3.5 Sonnet)',
-      failoverModel: 'Google Gemini 3.8 Flash',
+      primaryModel: 'AWS Bedrock (Claude Sonnet)',
+      failoverModel: 'Google Gemini 3.5+ Flash',
       database: 'Amazon DynamoDB (Single-Table Architecture)',
       timestamp: new Date().toISOString()
     });
@@ -307,7 +307,7 @@ async function startServer() {
     res.json({ success: true, deleted: { PK: pk, SK: sk } });
   });
 
-  // Bedrock Claude 3.5 Sonnet Execution Endpoint with Gemini Autonomous Failover
+  // Bedrock Claude Sonnet Execution Endpoint with Gemini Autonomous Failover
   app.post('/api/bedrock/invoke', async (req, res) => {
     const { prompt, systemInstruction, customCredentials, agentName, agentId } = req.body;
 
@@ -316,13 +316,35 @@ async function startServer() {
     const rawSecret = (customCredentials?.secretAccessKey || process.env.AWS_SECRET_ACCESS_KEY || '').trim();
     // AWS IAM Secret Access Keys must be exactly 40 base64 characters; discard incomplete/invalid defaults
     const secretAccessKey = (rawSecret.length === 40 && rawSecret !== '20un1TmaK/JGV6p6uVKY6gLRejK+4oBySjRr9') ? rawSecret : '';
-    const modelId = (customCredentials?.modelId || process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20240620-v1:0').trim();
+
+    // Prioritized Bedrock Models Pool:
+    // Model 1: anthropic.claude-sonnet-4-6 (Priority 1)
+    // Model 2: anthropic.claude-3-5-sonnet-20241022-v2:0 (Priority 2)
+    // Model 3: anthropic.claude-sonnet-5 (Priority 3)
+    const rawModelList: (string | undefined)[] = [
+      customCredentials?.modelId,
+      process.env.BEDROCK_MODEL_ID,
+      'anthropic.claude-sonnet-4-6',
+      customCredentials?.model2Id,
+      process.env.BEDROCK_MODEL_2_ID,
+      'anthropic.claude-3-5-sonnet-20241022-v2:0',
+      customCredentials?.model3Id,
+      process.env.BEDROCK_MODEL_3_ID,
+      'anthropic.claude-sonnet-5',
+    ];
+
+    const uniqueBedrockModels = Array.from(
+      new Set(
+        rawModelList.filter((m): m is string => typeof m === 'string' && m.trim().length > 0)
+      )
+    );
+    const primaryModelId = uniqueBedrockModels[0] || 'anthropic.claude-sonnet-4-6';
 
     console.log('\n==================== [AI AGENT TASK DISPATCH] ====================');
     console.log(`[Bedrock Dispatch] 🤖 Target Agent: ${agentName || 'Agent'} (${agentId || 'id'})`);
     console.log(`[Bedrock Dispatch] 🕒 Timestamp: ${new Date().toISOString()}`);
-    console.log(`[Bedrock Priority] 🎯 PRIORITY 1: AWS Bedrock Claude 3.5 Sonnet (EXCLUSIVELY FIRED FIRST)`);
-    console.log(`[Bedrock Config] Model ID: ${modelId}`);
+    console.log(`[Bedrock Priority] 🎯 PRIORITY 1: AWS Bedrock Claude Sonnet (EXCLUSIVELY FIRED FIRST)`);
+    console.log(`[Bedrock Config] Prioritized Model Pool: ${uniqueBedrockModels.join(' -> ')}`);
     console.log(`[Bedrock Config] Region: ${region}`);
     console.log(`[Bedrock Config] Access Key ID: ${accessKeyId ? accessKeyId.slice(0, 4) + '...' + accessKeyId.slice(-4) : 'NONE'}`);
     console.log(`[Bedrock Config] Secret Key Length: ${secretAccessKey ? '40 chars (valid)' : `${rawSecret.length} chars (pending valid 40-char key)`}`);
@@ -330,7 +352,7 @@ async function startServer() {
 
     let bedrockError: any = null;
 
-    // 1. Attempt AWS Bedrock Claude 3.5 Sonnet (EXCLUSIVELY FIRST - NO PARALLEL GEMINI CALL)
+    // 1. Attempt AWS Bedrock Claude Sonnet (EXCLUSIVELY FIRST - NO PARALLEL GEMINI CALL)
     // Only dispatch to Bedrock if credentials strictly conform to AWS IAM key specifications (20 chars / 40 chars)
     const hasValidAwsCredentials = Boolean(
       accessKeyId &&
@@ -340,60 +362,66 @@ async function startServer() {
     );
 
     if (hasValidAwsCredentials) {
-      try {
-        console.log(`[Bedrock Execution] 🚀 Initializing BedrockRuntimeClient and dispatching InvokeModelCommand...`);
-        const client = new BedrockRuntimeClient({
-          region,
-          credentials: {
-            accessKeyId,
-            secretAccessKey
+      const client = new BedrockRuntimeClient({
+        region,
+        credentials: {
+          accessKeyId,
+          secretAccessKey
+        }
+      });
+
+      const payload = {
+        anthropic_version: 'bedrock-2023-05-31',
+        max_tokens: 3000,
+        temperature: 0.2,
+        system: systemInstruction || 'You are an elite SDLC engineer on the Digitano Scrum team.',
+        messages: [
+          { role: 'user', content: prompt }
+        ]
+      };
+
+      for (let idx = 0; idx < uniqueBedrockModels.length; idx++) {
+        const candidateModel = uniqueBedrockModels[idx];
+        const modelLabel = `Model #${idx + 1} (${candidateModel})`;
+
+        try {
+          console.log(`[Bedrock Execution] 🚀 Dispatching InvokeModelCommand for ${modelLabel}...`);
+          const command = new InvokeModelCommand({
+            modelId: candidateModel,
+            contentType: 'application/json',
+            accept: 'application/json',
+            body: JSON.stringify(payload)
+          });
+
+          const startTime = Date.now();
+          const bedrockResponse = await client.send(command);
+          const duration = Date.now() - startTime;
+
+          const responseBody = JSON.parse(new TextDecoder().decode(bedrockResponse.body));
+          const textOutput = responseBody.content?.[0]?.text || JSON.stringify(responseBody);
+
+          console.log(`[Bedrock Execution] ✅ AWS BEDROCK CLAUDE SONNET SUCCEEDED with ${modelLabel} in ${duration}ms!`);
+          console.log(`[Bedrock Execution] Generated output: ${textOutput.length} characters.`);
+          console.log('==================================================================\n');
+
+          return res.json({
+            success: true,
+            engine: 'AWS Bedrock (Claude Sonnet)',
+            modelName: 'Anthropic Claude Sonnet',
+            modelId: candidateModel,
+            provider: `AWS Bedrock (${region})`,
+            text: textOutput,
+            bedrockAttempted: true,
+            bedrockSucceeded: true,
+            failoverEngaged: false
+          });
+        } catch (err: any) {
+          bedrockError = err;
+          console.warn(`[Bedrock Invocation Note] ${modelLabel} returned ${err.name || 'Error'}: ${err.message}`);
+          if (err.name === 'InvalidSignatureException') {
+            console.warn(`[Bedrock Diagnostic] ⚠️ Signature mismatch: Please check that the AWS IAM Secret Access Key is active and correct in Settings.`);
+            break; // Secret key error affects all Bedrock models
           }
-        });
-
-        const payload = {
-          anthropic_version: 'bedrock-2023-05-31',
-          max_tokens: 3000,
-          temperature: 0.2,
-          system: systemInstruction || 'You are an elite SDLC engineer on the Digitano Scrum team.',
-          messages: [
-            { role: 'user', content: prompt }
-          ]
-        };
-
-        const command = new InvokeModelCommand({
-          modelId,
-          contentType: 'application/json',
-          accept: 'application/json',
-          body: JSON.stringify(payload)
-        });
-
-        const startTime = Date.now();
-        const bedrockResponse = await client.send(command);
-        const duration = Date.now() - startTime;
-
-        const responseBody = JSON.parse(new TextDecoder().decode(bedrockResponse.body));
-        const textOutput = responseBody.content?.[0]?.text || JSON.stringify(responseBody);
-
-        console.log(`[Bedrock Execution] ✅ AWS BEDROCK CLAUDE 3.5 SONNET SUCCEEDED in ${duration}ms!`);
-        console.log(`[Bedrock Execution] Generated output: ${textOutput.length} characters.`);
-        console.log('==================================================================\n');
-
-        return res.json({
-          success: true,
-          engine: 'AWS Bedrock (Claude 3.5 Sonnet)',
-          modelName: 'Anthropic Claude 3.5 Sonnet',
-          modelId,
-          provider: `AWS Bedrock (${region})`,
-          text: textOutput,
-          bedrockAttempted: true,
-          bedrockSucceeded: true,
-          failoverEngaged: false
-        });
-      } catch (err: any) {
-        bedrockError = err;
-        console.warn(`[Bedrock Invocation Note] AWS Bedrock call returned ${err.name || 'Error'}: ${err.message}`);
-        if (err.name === 'InvalidSignatureException') {
-          console.warn(`[Bedrock Diagnostic] ⚠️ Signature mismatch: Please check that the AWS IAM Secret Access Key is active and correct in Settings.`);
         }
       }
     } else {
@@ -401,7 +429,7 @@ async function startServer() {
     }
 
     // 2. Automated Failover Layer: Google Gemini Models (ONLY ENGAGED IF BEDROCK FAILS)
-    console.log(`[Failover Dispatch] 🔄 Bedrock not available. Evaluating sequential failover layer...`);
+    console.log(`[Failover Dispatch] 🔄 Bedrock not available. Evaluating sequential Gemini failover layer (3.5 or newer)...`);
 
     // Rotate across 3 Gemini API keys with fallback
     const geminiKeysPool: string[] = [
@@ -431,9 +459,10 @@ async function startServer() {
 
         try {
           const aiInstance = new GoogleGenAI({ apiKey: currentKey });
-          const candidateModels = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+          // Gemini Flash models strictly 3.5 or newer
+          const candidateModels = ['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-3-flash'];
           let geminiRespText = '';
-          let matchedModel = 'gemini-2.5-flash';
+          let matchedModel = 'gemini-3.5-flash';
 
           for (const model of candidateModels) {
             try {
@@ -464,11 +493,17 @@ async function startServer() {
 
           if (geminiRespText) {
             geminiSucceeded = true;
+            const modelNameFormatted = matchedModel === 'gemini-3.8-flash'
+              ? 'Google Gemini 3.8 Flash'
+              : matchedModel === 'gemini-3.5-flash'
+              ? 'Google Gemini 3.5 Flash'
+              : `Google ${matchedModel}`;
+
             console.log('==================================================================\n');
             return res.json({
               success: true,
               engine: `Google Gemini (${matchedModel})`,
-              modelName: matchedModel === 'gemini-2.5-flash' ? 'Google Gemini 2.5 Flash' : `Google ${matchedModel}`,
+              modelName: modelNameFormatted,
               modelId: matchedModel,
               provider: `Google GenAI API [${keyLabel}]`,
               text: geminiRespText,
@@ -487,14 +522,14 @@ async function startServer() {
     }
 
     // 3. Fallback to Local SDLC Domain Synthesizer Protocol
-    console.log(`[SDLC Synthesizer] ⚡ Handing off to deterministic SDLC domain synthesizer (Claude 3.5 Sonnet Protocol)...`);
+    console.log(`[SDLC Synthesizer] ⚡ Handing off to deterministic SDLC domain synthesizer (Claude Sonnet Protocol)...`);
     console.log('==================================================================\n');
 
     return res.json({
       success: true,
-      engine: 'AWS Bedrock (Claude 3.5 Sonnet Protocol)',
-      modelName: 'Anthropic Claude 3.5 Sonnet',
-      modelId,
+      engine: 'AWS Bedrock (Claude Sonnet Protocol)',
+      modelName: 'Anthropic Claude Sonnet',
+      modelId: primaryModelId,
       provider: `AWS Bedrock (${region}) & Local SDLC Orchestrator`,
       text: '', // Triggers high-fidelity domain synthesizer on client
       bedrockAttempted: true,

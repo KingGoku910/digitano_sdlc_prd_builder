@@ -185,8 +185,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "PRD Executive Summary, Persona Matrix, and Feature User Stories passed to Software Analyst.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude 3.5 Sonnet",
-      modelId: "anthropic.claude-3-5-sonnet-20240620-v1:0",
+      modelName: "Anthropic Claude Sonnet",
+      modelId: "anthropic.claude-sonnet-4-6",
       provider: "AWS Bedrock Runtime (us-east-1)",
       reasoningType: "Scope Analysis & Gherkin Story Engineering",
     },
@@ -198,8 +198,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "System Architecture Specification, Security Boundaries, and Failure Mode Mitigations passed to UI & Backend Leads.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude 3.5 Sonnet",
-      modelId: "anthropic.claude-3-5-sonnet-20240620-v1:0",
+      modelName: "Anthropic Claude Sonnet",
+      modelId: "anthropic.claude-sonnet-4-6",
       provider: "AWS Bedrock Runtime (us-east-1)",
       reasoningType: "System Boundaries & Failure Mode Modeling",
     },
@@ -211,8 +211,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "Tailwind Design System Tokens, Component Hierarchy Tree, and Layout Grid Specs passed to Full Stack Integrator.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude 3.5 Sonnet",
-      modelId: "anthropic.claude-3-5-sonnet-20240620-v1:0",
+      modelName: "Anthropic Claude Sonnet",
+      modelId: "anthropic.claude-sonnet-4-6",
       provider: "AWS Bedrock Runtime (us-east-1)",
       reasoningType: "Visual Layout & Design System Synthesis",
     },
@@ -224,8 +224,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "DynamoDB Single-Table Schema & REST API Endpoint Contracts passed to Full Stack Integrator.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude 3.5 Sonnet",
-      modelId: "anthropic.claude-3-5-sonnet-20240620-v1:0",
+      modelName: "Anthropic Claude Sonnet",
+      modelId: "anthropic.claude-sonnet-4-6",
       provider: "AWS Bedrock Runtime (us-east-1)",
       reasoningType: "NoSQL Schema & REST Contract Design",
     },
@@ -237,8 +237,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "Custom React State Hooks & Client-Server API Interceptors passed to Infra Architect.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude 3.5 Sonnet",
-      modelId: "anthropic.claude-3-5-sonnet-20240620-v1:0",
+      modelName: "Anthropic Claude Sonnet",
+      modelId: "anthropic.claude-sonnet-4-6",
       provider: "AWS Bedrock Runtime (us-east-1)",
       reasoningType: "Full-Stack State Management & Reactive Client Integration",
     },
@@ -250,8 +250,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "Cloud Infrastructure Blueprint, Cognito Auth Configurations, and Deployment Specs passed to Scrum Master.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude 3.5 Sonnet",
-      modelId: "anthropic.claude-3-5-sonnet-20240620-v1:0",
+      modelName: "Anthropic Claude Sonnet",
+      modelId: "anthropic.claude-sonnet-4-6",
       provider: "AWS Bedrock Runtime (us-east-1)",
       reasoningType: "Cloud Infrastructure & Container Deployment IaC",
     },
@@ -263,15 +263,15 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "Master 4-Part Deliverable Suite (PRD, DB Schema, API Contracts, and 3 Vibe-Coder Prompts) ready for code generation.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude 3.5 Sonnet",
-      modelId: "anthropic.claude-3-5-sonnet-20240620-v1:0",
+      modelName: "Anthropic Claude Sonnet",
+      modelId: "anthropic.claude-sonnet-4-6",
       provider: "AWS Bedrock Runtime (us-east-1)",
       reasoningType: "Agile Sprint Consolidation & Vibe-Coder Prompt Engineering",
     },
   },
 };
 
-// Model invocation helper with AWS Bedrock Claude 3.5 Sonnet Primary & Gemini 2.5 Flash Failover
+// Model invocation helper with AWS Bedrock Claude Sonnet Primary & Gemini 3.5+ Flash Failover
 export interface ModelExecutionResult {
   text: string;
   engine: string;
@@ -305,17 +305,19 @@ export async function executeAgentReasoning(
   // Valid AWS IAM Secret Access Keys are always exactly 40 base64 characters
   const secretAccessKey = (rawSecret.length === 40 && rawSecret !== "20un1TmaK/JGV6p6uVKY6gLRejK+4oBySjRr9") ? rawSecret : "";
   const region = (savedSettings.awsRegion || "us-east-1").trim();
-  const modelId = (savedSettings.bedrockModelId || "anthropic.claude-3-5-sonnet-20240620-v1:0").trim();
+  const modelId = (savedSettings.bedrockModelId || "anthropic.claude-sonnet-4-6").trim();
+  const model2Id = (savedSettings.bedrockModel2Id || "anthropic.claude-3-5-sonnet-20241022-v2:0").trim();
+  const model3Id = (savedSettings.bedrockModel3Id || "anthropic.claude-sonnet-5").trim();
   const geminiApiKey = (savedSettings.geminiApiKey || "").trim();
   const geminiApi2Key = (savedSettings.geminiApi2Key || "").trim();
   const geminiApi3Key = (savedSettings.geminiApi3Key || "").trim();
 
   console.group(`🤖 [AI Agent Pipeline] Dispatching: ${agentName} (${agentId || "Agent"})`);
-  console.log(`🎯 [Priority #1] AWS Bedrock Claude 3.5 Sonnet (${modelId}) in ${region}`);
+  console.log(`🎯 [Priority #1] AWS Bedrock Claude Sonnet (${modelId}) in ${region}`);
   console.log(`🔑 [AWS Credentials] AccessKey: ${accessKeyId ? accessKeyId.slice(0, 4) + "..." + accessKeyId.slice(-4) : "NONE"}, SecretKey: ${secretAccessKey ? "40 chars (valid format)" : `${rawSecret.length} chars (pending full 40-char key)`}`);
   console.log(`📡 [Dispatch] Firing request to /api/bedrock/invoke...`);
 
-  // 1. PRIMARY ATTEMPT: AWS Bedrock (Claude 3.5 Sonnet) via server endpoint
+  // 1. PRIMARY ATTEMPT: AWS Bedrock (Claude Sonnet) via server endpoint
   try {
     const resp = await fetch("/api/bedrock/invoke", {
       method: "POST",
@@ -332,6 +334,8 @@ export async function executeAgentReasoning(
           secretAccessKey,
           region,
           modelId,
+          model2Id,
+          model3Id,
           geminiApiKey,
           geminiApi2Key,
           geminiApi3Key,
@@ -344,7 +348,7 @@ export async function executeAgentReasoning(
       console.log(`📥 [Bedrock Server Response] Received response for ${agentName}:`, data.engine);
 
       if (data.bedrockSucceeded) {
-        console.log(`✅ [Bedrock Succeeded] Real-time AWS Bedrock Claude 3.5 Sonnet output received! Length: ${data.text?.length} chars`);
+        console.log(`✅ [Bedrock Succeeded] Real-time AWS Bedrock Claude Sonnet output received! Length: ${data.text?.length} chars`);
       } else if (data.failoverEngaged) {
         console.warn(`⚠️ [Bedrock Failover Notice] AWS Bedrock was prioritized first, but failover was engaged. Diagnostic: ${data.notes || "Check backend console logs"}`);
       }
@@ -355,9 +359,9 @@ export async function executeAgentReasoning(
         const isBedrock = data.engine?.includes("Bedrock");
         return {
           text: data.text,
-          engine: data.engine || "AWS Bedrock (Claude 3.5 Sonnet)",
-          modelName: data.modelName || (isBedrock ? "Anthropic Claude 3.5 Sonnet" : "Google Gemini 2.5 Flash"),
-          modelId: data.modelId || (isBedrock ? "anthropic.claude-3-5-sonnet-20240620-v1:0" : "gemini-2.5-flash"),
+          engine: data.engine || "AWS Bedrock (Claude Sonnet)",
+          modelName: data.modelName || (isBedrock ? "Anthropic Claude Sonnet" : "Google Gemini 3.5 Flash"),
+          modelId: data.modelId || (isBedrock ? "anthropic.claude-sonnet-4-6" : "gemini-3.5-flash"),
           provider: data.provider || (isBedrock ? "AWS Bedrock Runtime (us-east-1)" : "Google GenAI API"),
           bedrockAttempted: true,
           failoverEngaged: !isBedrock,
@@ -373,8 +377,8 @@ export async function executeAgentReasoning(
 
       return {
         text: domainText,
-        engine: data.engine || "AWS Bedrock (Claude 3.5 Sonnet Protocol)",
-        modelName: data.modelName || "Anthropic Claude 3.5 Sonnet",
+        engine: data.engine || "AWS Bedrock (Claude Sonnet Protocol)",
+        modelName: data.modelName || "Anthropic Claude Sonnet",
         modelId: data.modelId || modelId,
         provider: data.provider || `AWS Bedrock (${region}) & SDLC Orchestrator`,
         bedrockAttempted: true,
@@ -396,9 +400,9 @@ export async function executeAgentReasoning(
 
   return {
     text: fallbackText,
-    engine: "AWS Bedrock (Claude 3.5 Sonnet Protocol)",
-    modelName: "Anthropic Claude 3.5 Sonnet",
-    modelId: "anthropic.claude-3-5-sonnet-20240620-v1:0",
+    engine: "AWS Bedrock (Claude Sonnet Protocol)",
+    modelName: "Anthropic Claude Sonnet",
+    modelId: "anthropic.claude-sonnet-4-6",
     provider: "AWS Bedrock Runtime (us-east-1) & SDLC Orchestrator",
     bedrockAttempted: true,
     failoverEngaged: false,
@@ -650,7 +654,7 @@ TASK:
 Provide a concise Sprint Alignment Confirmation for "${projectTitle}", confirming that all 7 agents have produced aligned specifications and that sprint artifacts are ready for development handoff.`;
     }
 
-    // Execute reasoning with Dual-LLM Engine (AWS Bedrock Claude 3.5 Sonnet / Gemini Models)
+    // Execute reasoning with Dual-LLM Engine (AWS Bedrock Claude Sonnet / Gemini Models)
     const reasoningResult = await executeAgentReasoning(
       agentTaskPrompt,
       systemInstruction,

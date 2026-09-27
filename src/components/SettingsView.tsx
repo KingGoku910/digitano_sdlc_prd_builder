@@ -14,7 +14,9 @@ const RENDER_ENV_VARS = [
   { key: "COGNITO_USER_POOL_ID", value: "us-east-1_Gx1XLOLRJ", note: "Cognito User Pool ID for JWKS validation" },
   { key: "COGNITO_APP_CLIENT_ID", value: "408ssjnnva8r0p9adutse6q1ht", note: "Cognito App Client ID" },
   { key: "DYNAMODB_TABLE_NAME", value: "DigitanoProjects", note: "DynamoDB On-Demand Single-Table name" },
-  { key: "BEDROCK_MODEL_ID", value: "anthropic.claude-3-5-sonnet-20240620-v1:0", note: "Primary Reasoning Model" },
+  { key: "BEDROCK_MODEL_ID", value: "anthropic.claude-sonnet-4-6", note: "Primary Reasoning Model (Model 1 Priority)" },
+  { key: "BEDROCK_MODEL_2_ID", value: "anthropic.claude-3-5-sonnet-20241022-v2:0", note: "Secondary Reasoning Model (Model 2 Priority)" },
+  { key: "BEDROCK_MODEL_3_ID", value: "anthropic.claude-sonnet-5", note: "Tertiary Reasoning Model (Model 3 Priority)" },
   { key: "GEMINI_API_KEY", value: "AIzaSy...", note: "Google Gemini Flash Failover API Key 1" },
   { key: "GEMINI_API2_KEY", value: "AIzaSy...", note: "Google Gemini Flash Failover API Key 2" },
   { key: "GEMINI_API3_KEY", value: "AIzaSy...", note: "Google Gemini Flash Failover API Key 3" },
@@ -28,7 +30,9 @@ export function SettingsView() {
   const [backendUrl, setBackendUrl] = useState(API_BASE_URL);
   const [awsAccessKeyId, setAwsAccessKeyId] = useState("AKIA5RURABIWRXNTZAMQ");
   const [awsSecretAccessKey, setAwsSecretAccessKey] = useState("");
-  const [bedrockModelId, setBedrockModelId] = useState("anthropic.claude-3-5-sonnet-20240620-v1:0");
+  const [bedrockModelId, setBedrockModelId] = useState("anthropic.claude-sonnet-4-6");
+  const [bedrockModel2Id, setBedrockModel2Id] = useState("anthropic.claude-3-5-sonnet-20241022-v2:0");
+  const [bedrockModel3Id, setBedrockModel3Id] = useState("anthropic.claude-sonnet-5");
   const [geminiApiKey, setGeminiApiKey] = useState("");
   const [geminiApi2Key, setGeminiApi2Key] = useState("");
   const [geminiApi3Key, setGeminiApi3Key] = useState("");
@@ -53,7 +57,11 @@ export function SettingsView() {
         if (parsed.awsSecretAccessKey && parsed.awsSecretAccessKey !== "20un1TmaK/JGV6p6uVKY6gLRejK+4oBySjRr9") {
           setAwsSecretAccessKey(parsed.awsSecretAccessKey);
         }
-        if (parsed.bedrockModelId) setBedrockModelId(parsed.bedrockModelId);
+        if (parsed.bedrockModelId && !parsed.bedrockModelId.includes("20240620")) {
+          setBedrockModelId(parsed.bedrockModelId);
+        }
+        if (parsed.bedrockModel2Id) setBedrockModel2Id(parsed.bedrockModel2Id);
+        if (parsed.bedrockModel3Id) setBedrockModel3Id(parsed.bedrockModel3Id);
         if (parsed.geminiApiKey) setGeminiApiKey(parsed.geminiApiKey);
         if (parsed.geminiApi2Key) setGeminiApi2Key(parsed.geminiApi2Key);
         if (parsed.geminiApi3Key) setGeminiApi3Key(parsed.geminiApi3Key);
@@ -87,6 +95,8 @@ export function SettingsView() {
       awsAccessKeyId,
       awsSecretAccessKey,
       bedrockModelId,
+      bedrockModel2Id,
+      bedrockModel3Id,
       geminiApiKey,
       geminiApi2Key,
       geminiApi3Key,
@@ -338,7 +348,7 @@ export function SettingsView() {
             <div>
               <h2 className="text-sm font-bold text-white">AWS Bedrock Reasoning Engine &amp; Failover Architecture</h2>
               <p className="text-xs text-slate-400">
-                Primary execution on Claude 3.5 Sonnet (anthropic.claude-3-5-sonnet-20240620-v1:0) with Google Gemini 3.8 Flash automated failover.
+                Primary execution on Claude Sonnet with Google Gemini 3.5+ Flash automated failover.
               </p>
             </div>
           </div>
@@ -384,16 +394,57 @@ export function SettingsView() {
               </div>
             </div>
 
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-mono text-slate-400 mb-1.5">
-                BEDROCK MODEL ID (CLAUDE 3.5 SONNET)
-              </label>
-              <input
-                type="text"
-                value={bedrockModelId}
-                onChange={(e) => setBedrockModelId(e.target.value)}
-                className="w-full px-3.5 py-2 rounded-xl bg-[#0B0F17] border border-[#1E293B] text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-400"
-              />
+            {/* 3 Prioritized Bedrock Claude Sonnet Models */}
+            <div className="sm:col-span-2 space-y-3 pt-2 border-t border-[#1E293B]/70">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-mono text-cyan-400 font-semibold uppercase tracking-wider">
+                  BEDROCK CLAUDE SONNET MODELS (PRIORITIZED POOL)
+                </span>
+                <span className="text-[10px] text-slate-500 font-mono">
+                  Priority 1 &rarr; Priority 2 &rarr; Priority 3
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] font-mono text-slate-400 mb-1">
+                    PRIORITY #1 (MODEL 1)
+                  </label>
+                  <input
+                    type="text"
+                    value={bedrockModelId}
+                    onChange={(e) => setBedrockModelId(e.target.value)}
+                    placeholder="anthropic.claude-sonnet-4-6"
+                    className="w-full px-3 py-2 rounded-xl bg-[#0B0F17] border border-[#1E293B] text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono text-slate-400 mb-1">
+                    PRIORITY #2 (MODEL 2)
+                  </label>
+                  <input
+                    type="text"
+                    value={bedrockModel2Id}
+                    onChange={(e) => setBedrockModel2Id(e.target.value)}
+                    placeholder="anthropic.claude-3-5-sonnet-20241022-v2:0"
+                    className="w-full px-3 py-2 rounded-xl bg-[#0B0F17] border border-[#1E293B] text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono text-slate-400 mb-1">
+                    PRIORITY #3 (MODEL 3)
+                  </label>
+                  <input
+                    type="text"
+                    value={bedrockModel3Id}
+                    onChange={(e) => setBedrockModel3Id(e.target.value)}
+                    placeholder="anthropic.claude-sonnet-5"
+                    className="w-full px-3 py-2 rounded-xl bg-[#0B0F17] border border-[#1E293B] text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-400"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* 3 Rotated Gemini API Keys */}
@@ -403,7 +454,7 @@ export function SettingsView() {
                   GOOGLE GEMINI FAILOVER API KEYS (3-KEY ROTATION POOL)
                 </span>
                 <span className="text-[10px] text-slate-500 font-mono">
-                  Auto-rotates on quota limits
+                  Gemini Flash 3.5+ &bull; Auto-rotates on quota limits
                 </span>
               </div>
 
@@ -452,7 +503,7 @@ export function SettingsView() {
 
           {awsSecretAccessKey.length !== 40 && (
             <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] font-mono text-amber-300">
-              ⚠️ <strong>Note on Secret Key Length:</strong> Your current Secret Key is {awsSecretAccessKey.length} characters. AWS IAM Secret Access Keys must be exactly 40 characters long. If characters were truncated when copying from a mobile device or screenshot, paste your complete 40-character key above. While invalid or truncated, the autonomous engine safely engages the Gemini 3.8 Flash failover layer.
+              ⚠️ <strong>Note on Secret Key Length:</strong> Your current Secret Key is {awsSecretAccessKey.length} characters. AWS IAM Secret Access Keys must be exactly 40 characters long. If characters were truncated when copying from a mobile device or screenshot, paste your complete 40-character key above. While invalid or truncated, the autonomous engine safely engages the Gemini 3.5+ Flash failover layer.
             </div>
           )}
 
@@ -462,9 +513,9 @@ export function SettingsView() {
                 <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
                 <span>Primary Engine (Active)</span>
               </div>
-              <div className="text-xs font-mono text-cyan-400">AWS Bedrock</div>
+              <div className="text-xs font-mono text-cyan-400">AWS Bedrock (Claude Sonnet)</div>
               <div className="text-[11px] text-slate-400 mt-1 font-mono">
-                anthropic.claude-3-5-sonnet-20240620-v1:0
+                {bedrockModelId}
               </div>
             </div>
 
@@ -473,9 +524,9 @@ export function SettingsView() {
                 <span className="w-2 h-2 rounded-full bg-[#10B981]" />
                 <span>Automated Failover (Standby)</span>
               </div>
-              <div className="text-xs font-mono text-emerald-400">Google Gemini Flash</div>
+              <div className="text-xs font-mono text-emerald-400">Google Gemini Flash (3.5+)</div>
               <div className="text-[11px] text-slate-400 mt-1 font-mono">
-                gemini-3.8-flash (Latest Model)
+                gemini-3.8-flash / gemini-3.5-flash
               </div>
             </div>
           </div>

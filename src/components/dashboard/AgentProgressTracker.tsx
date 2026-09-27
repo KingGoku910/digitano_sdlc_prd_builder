@@ -103,7 +103,7 @@ export function AgentProgressTracker({
             <div className="text-xs text-slate-400 mt-0.5">
               {isFinished
                 ? "Bespoke PRD, DynamoDB Schemas, REST API Contracts, and Vibe-Coder Prompts synthesized."
-                : "Orchestrating sequential domain reasoning with automated Bedrock Claude 3.5 Sonnet / Gemini failover."}
+                : "Orchestrating sequential domain reasoning with automated Bedrock Claude Sonnet / Gemini failover."}
             </div>
           </div>
         </div>
@@ -127,8 +127,8 @@ export function AgentProgressTracker({
           const isOutputExpanded = Boolean(expandedOutputs[agent.id]);
 
           // Fallback model details if not yet injected
-          const modelName = agent.modelInfo?.modelName || (agent.engineUsed?.includes("Gemini") ? "Google Gemini 2.5 Flash" : "Anthropic Claude 3.5 Sonnet");
-          const modelId = agent.modelInfo?.modelId || (agent.engineUsed?.includes("Gemini") ? "gemini-2.5-flash" : "anthropic.claude-3-5-sonnet-20240620-v1:0");
+          const modelName = agent.modelInfo?.modelName || (agent.engineUsed?.includes("Gemini") ? "Google Gemini 3.5 Flash" : "Anthropic Claude Sonnet");
+          const modelId = agent.modelInfo?.modelId || (agent.engineUsed?.includes("Gemini") ? "gemini-3.5-flash" : "anthropic.claude-sonnet-4-6");
           const provider = agent.modelInfo?.provider || (agent.engineUsed?.includes("Gemini") ? "Google GenAI API" : "AWS Bedrock Runtime (us-east-1)");
 
           return (

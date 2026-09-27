@@ -127,7 +127,7 @@ export function ProjectBriefInput({ onSubmit, isLoading = false }: ProjectBriefI
 
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-950/60 border border-purple-800/40 text-[11px] font-mono text-purple-300">
             <Zap className="w-3 h-3 text-purple-400" />
-            <span>Primary: AWS Bedrock (Claude 3.5 Sonnet)</span>
+            <span>Primary: AWS Bedrock (Claude Sonnet)</span>
           </div>
 
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-950/60 border border-emerald-800/40 text-[11px] font-mono text-emerald-300">
