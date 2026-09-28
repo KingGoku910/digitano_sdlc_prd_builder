@@ -41,8 +41,23 @@ export function HistoryView({ onSelectProject, onNewProject }: HistoryViewProps)
     setIsRefreshing(true);
     try {
       // 1. Load from DynamoDB (or local user partition)
-      const list = await fetchUserProjectsFromDynamoDB(email);
-      setProjects(list);
+      const rawList = await fetchUserProjectsFromDynamoDB(email);
+      const seen = new Set<string>();
+      const sanitized: ProjectRecord[] = [];
+
+      (Array.isArray(rawList) ? rawList : []).forEach((p, idx) => {
+        const id = p.id || p.SK?.replace("PROJECT#", "") || `proj_${idx}_${Date.now()}`;
+        if (!seen.has(id)) {
+          seen.add(id);
+          sanitized.push({
+            ...p,
+            id,
+            PK: p.PK || `USER#${email}`,
+            SK: p.SK || `PROJECT#${id}`,
+          });
+        }
+      });
+      setProjects(sanitized);
 
       // 2. Fetch DynamoDB status
       const res = await fetch(`/api/dynamodb/status?email=${encodeURIComponent(email)}`);
@@ -56,7 +71,23 @@ export function HistoryView({ onSelectProject, onNewProject }: HistoryViewProps)
       }
     } catch (err) {
       console.error("Failed to load user projects:", err);
-      setProjects(loadSavedProjects(email));
+      const fallbackList = loadSavedProjects(email);
+      const seen = new Set<string>();
+      const sanitized: ProjectRecord[] = [];
+
+      (Array.isArray(fallbackList) ? fallbackList : []).forEach((p, idx) => {
+        const id = p.id || p.SK?.replace("PROJECT#", "") || `proj_${idx}_${Date.now()}`;
+        if (!seen.has(id)) {
+          seen.add(id);
+          sanitized.push({
+            ...p,
+            id,
+            PK: p.PK || `USER#${email}`,
+            SK: p.SK || `PROJECT#${id}`,
+          });
+        }
+      });
+      setProjects(sanitized);
     } finally {
       setIsRefreshing(false);
     }
@@ -174,14 +205,16 @@ export function HistoryView({ onSelectProject, onNewProject }: HistoryViewProps)
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3">
-          {projects.map((project) => {
+          {projects.map((project, index) => {
             const hasArtifacts = Boolean(project.artifacts?.prd_document);
+            const projectId = project.id || `proj_${index}`;
             const pkLabel = project.PK || `USER#${project.userEmail || activeEmail}`;
-            const skLabel = project.SK || `PROJECT#${project.id}`;
+            const skLabel = project.SK || `PROJECT#${projectId}`;
+            const uniqueCardKey = `hist_proj_${projectId}_${index}_${project.createdAt || ""}`;
 
             return (
               <div
-                key={project.id}
+                key={uniqueCardKey}
                 onClick={() => onSelectProject(project)}
                 className="p-5 rounded-2xl bg-[#131924] border border-[#1E293B] hover:border-cyan-500/50 transition-all cursor-pointer group flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md"
               >
@@ -226,7 +259,7 @@ export function HistoryView({ onSelectProject, onNewProject }: HistoryViewProps)
                 <div className="flex items-center gap-2 self-end sm:self-center">
                   <button
                     type="button"
-                    onClick={(e) => handleDelete(project.id, e)}
+                    onClick={(e) => handleDelete(projectId, e)}
                     title="Delete from user history"
                     className="p-2 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
                   >

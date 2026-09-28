@@ -14,10 +14,9 @@ import { ArtifactViewer, ArtifactData } from "./components/dashboard/ArtifactVie
 import { HistoryView } from "./components/HistoryView";
 import { SettingsView } from "./components/SettingsView";
 import { ExportModal } from "./components/ExportModal";
-import { SecretsModal } from "./components/SecretsModal";
 import { isAuthenticated, logoutUser } from "./config/aws-cognito";
 import { runAgentPipeline, ProjectRecord, AGENT_SPECS } from "./services/sdlcEngine";
-import { ArrowRight, Zap, Users, Code, Sparkles, FolderGit2, ShieldCheck, KeyRound } from "lucide-react";
+import { ArrowRight, Zap, Users, Code, Sparkles, FolderGit2, ShieldCheck } from "lucide-react";
 
 const INITIAL_AGENTS: AgentState[] = [
   {
@@ -103,7 +102,6 @@ export default function App() {
   const [currentView, setCurrentView] = useState<"landing" | "login" | "dashboard">("landing");
   const [dashboardTab, setDashboardTab] = useState<"new_project" | "history" | "settings">("new_project");
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-  const [isSecretsModalOpen, setIsSecretsModalOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("digitano_sidebar_minimized") === "true";
@@ -228,14 +226,6 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => setIsSecretsModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-950/60 hover:bg-cyan-900/60 border border-cyan-800/40 text-xs font-mono text-cyan-300 transition-colors cursor-pointer"
-              >
-                <KeyRound className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Active Secrets</span>
-              </button>
-
               <button
                 onClick={() => setIsExportModalOpen(true)}
                 className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-slate-300 hover:text-cyan-300 transition-colors cursor-pointer"
@@ -425,7 +415,6 @@ export default function App() {
             <TopNavbar
               currentProjectTitle={currentProjectTitle}
               onOpenExportModal={() => setIsExportModalOpen(true)}
-              onOpenSecretsModal={() => setIsSecretsModalOpen(true)}
             />
 
             <main className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8">
@@ -477,12 +466,6 @@ export default function App() {
       <ExportModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
-      />
-
-      {/* Secrets & Credentials Live Inspector Modal */}
-      <SecretsModal
-        isOpen={isSecretsModalOpen}
-        onClose={() => setIsSecretsModalOpen(false)}
       />
     </div>
   );

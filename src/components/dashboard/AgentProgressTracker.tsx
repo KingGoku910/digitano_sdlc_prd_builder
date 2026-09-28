@@ -15,6 +15,7 @@ import {
   Zap,
 } from "lucide-react";
 import { CuteRobotAvatar } from "./CuteRobotAvatar";
+import { AgentPerformanceChart, AgentPerformanceMetrics } from "./AgentPerformanceChart";
 
 export interface AgentTaskHandoff {
   inputReceived: string;
@@ -41,6 +42,7 @@ export interface AgentState {
   engineUsed?: string;
   modelInfo?: AgentModelInfo;
   taskHandoff?: AgentTaskHandoff;
+  metrics?: AgentPerformanceMetrics;
 }
 
 interface AgentProgressTrackerProps {
@@ -76,6 +78,9 @@ export function AgentProgressTracker({
 
   return (
     <div className="space-y-6">
+      {/* High-Tech Multi-Agent Performance Telemetry Chart */}
+      <AgentPerformanceChart agents={agents} isFinished={isFinished} />
+
       {/* Top Banner Status */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-[#131924] border border-[#1E293B]">
         <div className="flex items-center gap-3">

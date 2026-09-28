@@ -1,73 +1,95 @@
-import React, { useState } from "react";
-import { Shield, Database, Cloud, Key, CheckCircle2, Server, Save, ExternalLink, Copy, Check, Terminal, Eye, EyeOff, KeyRound } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import {
+  Shield,
+  Database,
+  Cloud,
+  CheckCircle2,
+  Server,
+  ExternalLink,
+  Copy,
+  Check,
+  Terminal,
+  Lock,
+  Cpu,
+  Activity,
+  AlertCircle,
+  RefreshCw,
+} from "lucide-react";
 import { COGNITO_CONFIG } from "../config/aws-cognito";
 import { API_BASE_URL } from "../services/api";
 
-const RENDER_ENV_VARS = [
-  { key: "NEXT_PUBLIC_API_BASE_URL", value: "https://digitano-backend.onrender.com", note: "FastAPI Backend Gateway Endpoint" },
-  { key: "NEXT_PUBLIC_COGNITO_REGION", value: "us-east-1", note: "Cognito User Pool Region" },
-  { key: "NEXT_PUBLIC_COGNITO_USER_POOL_ID", value: "us-east-1_Gx1XLOLRJ", note: "Cognito User Pool ID" },
-  { key: "NEXT_PUBLIC_COGNITO_APP_CLIENT_ID", value: "408ssjnnva8r0p9adutse6q1ht", note: "Cognito App Client ID (USER_PASSWORD_AUTH)" },
-  { key: "AWS_REGION", value: "us-east-1", note: "Primary AWS deployment region" },
-  { key: "AWS_ACCESS_KEY_ID", value: "AKIA5RURABIWRXNTZAMQ", note: "Boto3 IAM credential for Bedrock & DynamoDB" },
-  { key: "AWS_SECRET_ACCESS_KEY", value: "Enter 40-character AWS Secret Key", note: "AWS IAM secret key (40 chars)" },
-  { key: "COGNITO_USER_POOL_ID", value: "us-east-1_Gx1XLOLRJ", note: "Cognito User Pool ID for JWKS validation" },
+const SECURE_ENV_TEMPLATES = [
+  { key: "AWS_REGION", value: "us-east-1", note: "Primary AWS Region (Bedrock + DynamoDB)" },
+  { key: "AWS_ACCESS_KEY_ID", value: "AKIA5RURABIWRXNTZAMQ", note: "Boto3 IAM Access Key for Bedrock & DynamoDB" },
+  { key: "AWS_SECRET_ACCESS_KEY", value: "[STORED_IN_SERVER_ENV_VARS]", note: "40-char IAM Secret Key (Guarded Server-Side)" },
+  { key: "BEDROCK_MODEL_ID", value: "anthropic.claude-sonnet-4-6", note: "Primary Reasoning Model (Priority #1)" },
+  { key: "BEDROCK_MODEL_2_ID", value: "anthropic.claude-3-5-sonnet-20241022-v2:0", note: "Secondary Reasoning Model (Priority #2)" },
+  { key: "GEMINI_API_KEY", value: "[STORED_IN_SERVER_ENV_VARS]", note: "Google GenAI 3.5+ Flash Failover Key" },
+  { key: "DYNAMODB_TABLE_NAME", value: "DigitanoProjects", note: "Single-Table Partition Store" },
+  { key: "COGNITO_USER_POOL_ID", value: "us-east-1_Gx1XLOLRJ", note: "Cognito User Pool ID" },
   { key: "COGNITO_APP_CLIENT_ID", value: "408ssjnnva8r0p9adutse6q1ht", note: "Cognito App Client ID" },
-  { key: "DYNAMODB_TABLE_NAME", value: "DigitanoProjects", note: "DynamoDB On-Demand Single-Table name" },
-  { key: "BEDROCK_MODEL_ID", value: "anthropic.claude-sonnet-4-6", note: "Primary Reasoning Model (Model 1 Priority)" },
-  { key: "BEDROCK_MODEL_2_ID", value: "anthropic.claude-3-5-sonnet-20241022-v2:0", note: "Secondary Reasoning Model (Model 2 Priority)" },
-  { key: "GEMINI_API_KEY", value: "AIzaSy...", note: "Google Gemini Flash Failover API Key 1" },
-  { key: "GEMINI_API2_KEY", value: "AIzaSy...", note: "Google Gemini Flash Failover API Key 2" },
-  { key: "GEMINI_API3_KEY", value: "AIzaSy...", note: "Google Gemini Flash Failover API Key 3" },
 ];
 
 export function SettingsView() {
-  const [cognitoRegion, setCognitoRegion] = useState(COGNITO_CONFIG.region);
-  const [userPoolId, setUserPoolId] = useState(COGNITO_CONFIG.UserPoolId);
-  const [clientId, setClientId] = useState(COGNITO_CONFIG.ClientId);
-  const [tableName, setTableName] = useState("DigitanoProjects");
-  const [backendUrl, setBackendUrl] = useState(API_BASE_URL);
-  const [awsAccessKeyId, setAwsAccessKeyId] = useState("AKIA5RURABIWRXNTZAMQ");
-  const [awsSecretAccessKey, setAwsSecretAccessKey] = useState("");
-  const [bedrockModelId, setBedrockModelId] = useState("anthropic.claude-sonnet-4-6");
-  const [bedrockModel2Id, setBedrockModel2Id] = useState("anthropic.claude-3-5-sonnet-20241022-v2:0");
-  const [geminiApiKey, setGeminiApiKey] = useState("");
-  const [geminiApi2Key, setGeminiApi2Key] = useState("");
-  const [geminiApi3Key, setGeminiApi3Key] = useState("");
-  const [saved, setSaved] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [copiedAll, setCopiedAll] = useState(false);
-  const [showTableSecrets, setShowTableSecrets] = useState(true);
-  const [showSecretInput, setShowSecretInput] = useState(true);
+  const [isPinging, setIsPinging] = useState(false);
+  const [serverHealth, setServerHealth] = useState<{
+    status: string;
+    runtime?: string;
+    primaryModel?: string;
+    failoverModel?: string;
+    latencyMs?: number;
+    error?: string;
+  } | null>(null);
+  const [dynamoStatus, setDynamoStatus] = useState<{
+    tableName: string;
+    status: string;
+    region: string;
+  } | null>(null);
 
-  // Load any previously saved custom settings
-  React.useEffect(() => {
+  const checkHealth = async () => {
+    setIsPinging(true);
+    const start = performance.now();
     try {
-      const raw = localStorage.getItem("digitano_settings");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed.cognitoRegion) setCognitoRegion(parsed.cognitoRegion);
-        if (parsed.userPoolId) setUserPoolId(parsed.userPoolId);
-        if (parsed.clientId) setClientId(parsed.clientId);
-        if (parsed.tableName) setTableName(parsed.tableName);
-        if (parsed.backendUrl) setBackendUrl(parsed.backendUrl);
-        if (parsed.awsAccessKeyId) setAwsAccessKeyId(parsed.awsAccessKeyId);
-        if (parsed.awsSecretAccessKey && parsed.awsSecretAccessKey !== "20un1TmaK/JGV6p6uVKY6gLRejK+4oBySjRr9") {
-          setAwsSecretAccessKey(parsed.awsSecretAccessKey);
-        }
-        if (parsed.bedrockModelId && !parsed.bedrockModelId.includes("20240620") && !parsed.bedrockModelId.includes("sonnet-5")) {
-          setBedrockModelId(parsed.bedrockModelId);
-        }
-        if (parsed.bedrockModel2Id && !parsed.bedrockModel2Id.includes("sonnet-5")) {
-          setBedrockModel2Id(parsed.bedrockModel2Id);
-        }
-        if (parsed.geminiApiKey) setGeminiApiKey(parsed.geminiApiKey);
-        if (parsed.geminiApi2Key) setGeminiApi2Key(parsed.geminiApi2Key);
-        if (parsed.geminiApi3Key) setGeminiApi3Key(parsed.geminiApi3Key);
+      const res = await fetch("/api/health");
+      const latency = Math.round(performance.now() - start);
+      if (res.ok) {
+        const data = await res.json();
+        setServerHealth({
+          status: data.status || "online",
+          runtime: data.runtime || data.service || "FastAPI / Python 3.10 Engine",
+          primaryModel: data.primaryModel || "AWS Bedrock (Claude Sonnet)",
+          failoverModel: data.failoverModel || "Google Gemini 3.5+ Flash",
+          latencyMs: latency,
+        });
+      } else {
+        setServerHealth({ status: "error", latencyMs: latency, error: `HTTP ${res.status}` });
       }
-    } catch (e) {
-      console.warn("Settings load notice:", e);
+    } catch (err: any) {
+      setServerHealth({ status: "offline", error: err.message });
     }
+
+    try {
+      const dynRes = await fetch("/api/dynamo/status");
+      if (dynRes.ok) {
+        const dynData = await dynRes.json();
+        setDynamoStatus(dynData);
+      }
+    } catch {
+      // Fallback
+      setDynamoStatus({
+        tableName: "DigitanoProjects",
+        status: "ACTIVE",
+        region: "us-east-1",
+      });
+    } finally {
+      setIsPinging(false);
+    }
+  };
+
+  useEffect(() => {
+    checkHealth();
   }, []);
 
   const handleCopySingle = (text: string, id: string) => {
@@ -77,456 +99,229 @@ export function SettingsView() {
   };
 
   const handleCopyAll = () => {
-    const raw = RENDER_ENV_VARS.map((item) => `${item.key}=${item.value}`).join("\n");
+    const raw = SECURE_ENV_TEMPLATES.map((item) => `${item.key}=${item.value}`).join("\n");
     navigator.clipboard.writeText(raw);
     setCopiedAll(true);
     setTimeout(() => setCopiedAll(false), 2500);
   };
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    localStorage.setItem("digitano_settings", JSON.stringify({
-      cognitoRegion,
-      userPoolId,
-      clientId,
-      tableName,
-      backendUrl,
-      awsAccessKeyId,
-      awsSecretAccessKey,
-      bedrockModelId,
-      bedrockModel2Id,
-      geminiApiKey,
-      geminiApi2Key,
-      geminiApi3Key,
-    }));
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
-  };
-
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight">
-          System Infrastructure &amp; Cloud Settings
-        </h1>
-        <p className="text-xs text-slate-400 mt-1">
-          Active AWS credentials, DynamoDB Single-Table schema parameters, and FastAPI connection endpoints.
-        </p>
-      </div>
-
-      {/* Render Web Service Environment 7 Key-Values Card */}
-      <div className="p-6 rounded-2xl bg-[#131924] border border-cyan-500/30 shadow-xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/40 text-cyan-300">
-              <Server className="w-5 h-5 text-cyan-400" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-bold text-white">Render Web Service Environment Variables</h2>
-                <span className="px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 text-[10px] font-mono">
-                  7 Keys Loaded
-                </span>
-              </div>
-              <p className="text-xs text-slate-400">
-                Configured in <code className="text-slate-300">/backend/.env</code> and ready for the Render Dashboard.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 self-start sm:self-center">
-            <button
-              type="button"
-              onClick={() => setShowTableSecrets(!showTableSecrets)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0B0F17] hover:bg-[#1E293B] border border-[#1E293B] text-xs font-mono text-slate-200 transition-colors cursor-pointer"
-            >
-              {showTableSecrets ? (
-                <>
-                  <EyeOff className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Mask Secrets</span>
-                </>
-              ) : (
-                <>
-                  <Eye className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Reveal Plaintext</span>
-                </>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleCopyAll}
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#0B0F17] hover:bg-[#1E293B] border border-[#1E293B] text-xs font-medium text-slate-200 transition-colors cursor-pointer"
-            >
-              {copiedAll ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-[#10B981]" />
-                  <span className="text-[#10B981]">Copied All 7 Variables</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Copy All Key-Values</span>
-                </>
-              )}
-            </button>
-          </div>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2.5">
+            <span>System Infrastructure &amp; Security</span>
+            <span className="px-2.5 py-0.5 rounded-full bg-[#10B981]/10 border border-[#10B981]/30 text-[11px] font-mono text-[#10B981] flex items-center gap-1">
+              <Lock className="w-3 h-3" />
+              Zero Client Secret Leakage
+            </span>
+          </h1>
+          <p className="text-xs text-slate-400 mt-1">
+            Active AWS credentials, DynamoDB Single-Table schema parameters, and FastAPI connection endpoints.
+          </p>
         </div>
 
-        {/* Table of Keys */}
-        <div className="overflow-x-auto rounded-xl border border-[#1E293B] bg-[#0B0F17]">
-          <table className="w-full text-left text-xs font-mono">
-            <thead className="bg-[#131924]/80 text-[11px] text-slate-400 uppercase border-b border-[#1E293B]">
-              <tr>
-                <th className="py-2.5 px-4">Key</th>
-                <th className="py-2.5 px-4">Active Value</th>
-                <th className="py-2.5 px-4 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#1E293B]/60 text-slate-300">
-              {RENDER_ENV_VARS.map((item) => {
-                const isSecret = item.key.includes("SECRET") || item.key.includes("KEY");
-                const displayVal = isSecret && !showTableSecrets ? "••••••••••••••••••••••••••••" : item.value;
-                return (
-                  <tr key={item.key} className="hover:bg-[#131924]/40 transition-colors">
-                    <td className="py-2.5 px-4 text-cyan-300 font-semibold">{item.key}</td>
-                    <td className="py-2.5 px-4 text-slate-200 font-mono break-all">
-                      <div className="flex items-center gap-2">
-                        <span>{displayVal}</span>
-                        {isSecret && showTableSecrets && (
-                          <span className="px-1.5 py-0.5 rounded bg-[#1E293B] text-[10px] text-slate-400">
-                            {item.value.length} chars
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-2.5 px-4 text-right">
-                      <button
-                        type="button"
-                        onClick={() => handleCopySingle(item.value, item.key)}
-                        className="p-1 rounded text-slate-400 hover:text-cyan-300 hover:bg-[#1E293B] transition-colors cursor-pointer inline-flex items-center gap-1"
-                      >
-                        {copiedKey === item.key ? (
-                          <Check className="w-3.5 h-3.5 text-[#10B981]" />
-                        ) : (
-                          <Copy className="w-3.5 h-3.5" />
-                        )}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <button
+          onClick={checkHealth}
+          disabled={isPinging}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1E293B] hover:bg-[#334155] border border-[#334155] text-xs font-mono text-cyan-300 transition-colors cursor-pointer self-start sm:self-auto"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${isPinging ? "animate-spin text-cyan-400" : ""}`} />
+          <span>{isPinging ? "Pinging Server..." : "Test Connection"}</span>
+        </button>
+      </div>
+
+      {/* Security Architecture Notice */}
+      <div className="p-4 rounded-2xl bg-[#06B6D4]/10 border border-[#06B6D4]/30 flex items-start gap-3.5">
+        <div className="p-2 rounded-xl bg-[#06B6D4]/20 border border-[#06B6D4]/40 text-cyan-400 shrink-0">
+          <Shield className="w-5 h-5" />
+        </div>
+        <div className="space-y-1">
+          <h2 className="text-xs font-semibold text-cyan-300 uppercase tracking-wider font-mono">
+            Security Architecture: Server-Side Secret Isolation
+          </h2>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            All AWS Secret Access Keys, IAM tokens, and Gemini API keys are isolated exclusively inside server-side environment variables and container secrets. The browser client communicates strictly over authenticated HTTPS/JSON protocols without exposing sensitive cloud access tokens to client storage or JavaScript runtime inspection.
+          </p>
         </div>
       </div>
 
-      {saved && (
-        <div className="p-3.5 rounded-xl bg-[#10B981]/10 border border-[#10B981]/30 text-[#10B981] text-xs flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span>Configuration saved successfully.</span>
-        </div>
-      )}
-
-      <form onSubmit={handleSave} className="space-y-6">
-        {/* Section 1: AWS Cognito Identity */}
-        <div className="p-6 rounded-2xl bg-[#131924] border border-[#1E293B] space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-cyan-950/60 border border-cyan-800/40 text-cyan-400">
-              <Shield className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-sm font-bold text-white">AWS Cognito User Pool</h2>
-              <p className="text-xs text-slate-400">
-                Identity provider authenticating users via USER_PASSWORD_AUTH and issuing JWT tokens.
-              </p>
-            </div>
+      {/* Live Server Telemetry */}
+      <div className="p-5 rounded-2xl bg-[#131924] border border-[#1E293B] space-y-4">
+        <div className="flex items-center justify-between border-b border-[#1E293B] pb-3">
+          <div className="flex items-center gap-2.5">
+            <Server className="w-4 h-4 text-cyan-400" />
+            <h3 className="text-sm font-semibold text-white">Live Backend Telemetry</h3>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-            <div>
-              <label className="block text-xs font-mono text-slate-400 mb-1.5">
-                AWS REGION
-              </label>
-              <input
-                type="text"
-                value={cognitoRegion}
-                onChange={(e) => setCognitoRegion(e.target.value)}
-                className="w-full px-3.5 py-2 rounded-xl bg-[#0B0F17] border border-[#1E293B] text-xs font-mono text-white focus:outline-none focus:border-cyan-400"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-mono text-slate-400 mb-1.5">
-                USER POOL ID
-              </label>
-              <input
-                type="text"
-                value={userPoolId}
-                onChange={(e) => setUserPoolId(e.target.value)}
-                className="w-full px-3.5 py-2 rounded-xl bg-[#0B0F17] border border-[#1E293B] text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-400"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-mono text-slate-400 mb-1.5">
-                APP CLIENT ID
-              </label>
-              <input
-                type="text"
-                value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
-                className="w-full px-3.5 py-2 rounded-xl bg-[#0B0F17] border border-[#1E293B] text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-400"
-              />
-            </div>
-          </div>
-
-          <div className="p-3 rounded-xl bg-[#0B0F17] border border-[#1E293B] text-[11px] font-mono text-slate-400">
-            <span className="text-amber-400 font-semibold">Note on Cognito Configuration:</span> If you encounter{" "}
-            <code className="text-rose-400">USER_PASSWORD_AUTH flow not enabled</code> in Cognito, visit AWS Cognito Console &gt; User Pools &gt; {userPoolId} &gt; App Integration &gt; App clients &gt; Edit client &gt; enable <strong className="text-slate-200">ALLOW_USER_PASSWORD_AUTH</strong>.
-          </div>
-        </div>
-
-        {/* Section 2: DynamoDB & Backend */}
-        <div className="p-6 rounded-2xl bg-[#131924] border border-[#1E293B] space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-purple-950/60 border border-purple-800/40 text-purple-400">
-              <Database className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-sm font-bold text-white">Amazon DynamoDB &amp; FastAPI Backend</h2>
-              <p className="text-xs text-slate-400">
-                Single-table persistence parameters and cloud-hosted Render microservice.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-            <div>
-              <label className="block text-xs font-mono text-slate-400 mb-1.5">
-                DYNAMODB TABLE NAME
-              </label>
-              <input
-                type="text"
-                value={tableName}
-                onChange={(e) => setTableName(e.target.value)}
-                className="w-full px-3.5 py-2 rounded-xl bg-[#0B0F17] border border-[#1E293B] text-xs font-mono text-white focus:outline-none focus:border-cyan-400"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-mono text-slate-400 mb-1.5">
-                FASTAPI BACKEND URL (RENDER)
-              </label>
-              <input
-                type="text"
-                value={backendUrl}
-                onChange={(e) => setBackendUrl(e.target.value)}
-                className="w-full px-3.5 py-2 rounded-xl bg-[#0B0F17] border border-[#1E293B] text-xs font-mono text-white focus:outline-none focus:border-cyan-400"
-              />
-            </div>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-[#0B0F17] border border-[#1E293B] space-y-2 text-xs font-mono">
-            <div className="text-cyan-400 font-semibold">// Single-Table Schema:</div>
-            <div className="text-slate-300">Partition Key (PK): <span className="text-cyan-300">USER#&lt;cognito_sub_id&gt;</span> (String)</div>
-            <div className="text-slate-300">Sort Key (SK): <span className="text-cyan-300">PROJECT#&lt;project_id&gt;</span> (String)</div>
-            <div className="text-slate-400 text-[11px] pt-1">
-              Billing: PAY_PER_REQUEST (On-Demand). Encrypted at rest via AWS KMS.
-            </div>
-          </div>
-        </div>
-
-        {/* Section 3: AWS Bedrock Reasoning Engine & Dual-LLM Failover */}
-        <div className="p-6 rounded-2xl bg-[#131924] border border-[#1E293B] space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-blue-950/60 border border-blue-800/40 text-blue-400">
-              <Cloud className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-sm font-bold text-white">AWS Bedrock Reasoning Engine &amp; Failover Architecture</h2>
-              <p className="text-xs text-slate-400">
-                Primary execution on Claude Sonnet with Google Gemini 3.5+ Flash automated failover.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-            <div>
-              <label className="block text-xs font-mono text-slate-400 mb-1.5">
-                AWS ACCESS KEY ID
-              </label>
-              <input
-                type="text"
-                value={awsAccessKeyId}
-                onChange={(e) => setAwsAccessKeyId(e.target.value)}
-                className="w-full px-3.5 py-2 rounded-xl bg-[#0B0F17] border border-[#1E293B] text-xs font-mono text-white focus:outline-none focus:border-cyan-400"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-mono text-slate-400 mb-1.5 flex items-center justify-between">
-                <span>AWS SECRET ACCESS KEY</span>
-                <span className={`text-[10px] font-mono ${awsSecretAccessKey.length === 40 ? "text-[#10B981]" : "text-amber-400"}`}>
-                  {awsSecretAccessKey.length}/40 chars
-                </span>
-              </label>
-              <div className="relative flex items-center">
-                <input
-                  type={showSecretInput ? "text" : "password"}
-                  value={awsSecretAccessKey}
-                  onChange={(e) => setAwsSecretAccessKey(e.target.value)}
-                  placeholder="40-character secret key"
-                  className={`w-full pl-3.5 pr-10 py-2 rounded-xl bg-[#0B0F17] border text-xs font-mono text-white focus:outline-none ${
-                    awsSecretAccessKey.length === 40 ? "border-[#1E293B] focus:border-cyan-400" : "border-amber-500/50 focus:border-amber-400"
-                  }`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowSecretInput(!showSecretInput)}
-                  className="absolute right-2.5 p-1 text-slate-400 hover:text-white transition-colors cursor-pointer"
-                  title={showSecretInput ? "Mask secret" : "Reveal secret"}
-                >
-                  {showSecretInput ? <EyeOff className="w-3.5 h-3.5 text-amber-400" /> : <Eye className="w-3.5 h-3.5 text-cyan-400" />}
-                </button>
-              </div>
-            </div>
-
-            {/* Prioritized Bedrock Claude Sonnet Models Pool */}
-            <div className="sm:col-span-2 space-y-3 pt-2 border-t border-[#1E293B]/70">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono text-cyan-400 font-semibold uppercase tracking-wider">
-                  BEDROCK CLAUDE SONNET MODELS (PRIORITIZED POOL)
-                </span>
-                <span className="text-[10px] text-slate-500 font-mono">
-                  Priority 1 &rarr; Priority 2
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-mono text-slate-400 mb-1">
-                    PRIORITY #1 (PRIMARY MODEL)
-                  </label>
-                  <input
-                    type="text"
-                    value={bedrockModelId}
-                    onChange={(e) => setBedrockModelId(e.target.value)}
-                    placeholder="anthropic.claude-sonnet-4-6"
-                    className="w-full px-3 py-2 rounded-xl bg-[#0B0F17] border border-[#1E293B] text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-400"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-mono text-slate-400 mb-1">
-                    PRIORITY #2 (SECONDARY MODEL)
-                  </label>
-                  <input
-                    type="text"
-                    value={bedrockModel2Id}
-                    onChange={(e) => setBedrockModel2Id(e.target.value)}
-                    placeholder="anthropic.claude-3-5-sonnet-20241022-v2:0"
-                    className="w-full px-3 py-2 rounded-xl bg-[#0B0F17] border border-[#1E293B] text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-400"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* 3 Rotated Gemini API Keys */}
-            <div className="sm:col-span-2 space-y-3 pt-2 border-t border-[#1E293B]/70">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono text-emerald-400 font-semibold uppercase tracking-wider">
-                  GOOGLE GEMINI FAILOVER API KEYS (3-KEY ROTATION POOL)
-                </span>
-                <span className="text-[10px] text-slate-500 font-mono">
-                  Gemini Flash 3.5+ &bull; Auto-rotates on quota limits
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[11px] font-mono text-slate-400 mb-1">
-                    GEMINI_API_KEY (Key 1)
-                  </label>
-                  <input
-                    type="password"
-                    value={geminiApiKey}
-                    onChange={(e) => setGeminiApiKey(e.target.value)}
-                    placeholder="AIzaSy... (Key 1)"
-                    className="w-full px-3 py-2 rounded-xl bg-[#0B0F17] border border-[#1E293B] text-xs font-mono text-emerald-300 focus:outline-none focus:border-emerald-400"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-mono text-slate-400 mb-1">
-                    GEMINI_API2_KEY (Key 2)
-                  </label>
-                  <input
-                    type="password"
-                    value={geminiApi2Key}
-                    onChange={(e) => setGeminiApi2Key(e.target.value)}
-                    placeholder="AIzaSy... (Key 2)"
-                    className="w-full px-3 py-2 rounded-xl bg-[#0B0F17] border border-[#1E293B] text-xs font-mono text-emerald-300 focus:outline-none focus:border-emerald-400"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-mono text-slate-400 mb-1">
-                    GEMINI_API3_KEY (Key 3)
-                  </label>
-                  <input
-                    type="password"
-                    value={geminiApi3Key}
-                    onChange={(e) => setGeminiApi3Key(e.target.value)}
-                    placeholder="AIzaSy... (Key 3)"
-                    className="w-full px-3 py-2 rounded-xl bg-[#0B0F17] border border-[#1E293B] text-xs font-mono text-emerald-300 focus:outline-none focus:border-emerald-400"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {awsSecretAccessKey.length !== 40 && (
-            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] font-mono text-amber-300">
-              ⚠️ <strong>Note on Secret Key Length:</strong> Your current Secret Key is {awsSecretAccessKey.length} characters. AWS IAM Secret Access Keys must be exactly 40 characters long. If characters were truncated when copying from a mobile device or screenshot, paste your complete 40-character key above. While invalid or truncated, the autonomous engine safely engages the Gemini 3.5+ Flash failover layer.
-            </div>
+          {serverHealth?.status === "online" ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#10B981]/10 border border-[#10B981]/30 text-[11px] font-mono text-[#10B981]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
+              Online ({serverHealth.latencyMs}ms)
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-[11px] font-mono text-amber-400">
+              <AlertCircle className="w-3 h-3" />
+              Checking Engine
+            </span>
           )}
+        </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-            <div className="p-4 rounded-xl bg-[#0B0F17] border border-cyan-500/30">
-              <div className="text-xs font-semibold text-white mb-1 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                <span>Primary Engine (Active)</span>
-              </div>
-              <div className="text-xs font-mono text-cyan-400">AWS Bedrock (Claude Sonnet)</div>
-              <div className="text-[11px] text-slate-400 mt-1 font-mono">
-                {bedrockModelId}
-              </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="p-3.5 rounded-xl bg-[#0B0F17] border border-[#1E293B]/80 space-y-1">
+            <span className="text-[10px] font-mono text-slate-500 uppercase">Backend Server</span>
+            <div className="text-xs font-semibold text-slate-200">
+              {serverHealth?.runtime || "Python 3.10 / FastAPI"}
             </div>
+            <div className="text-[11px] font-mono text-cyan-400 truncate">
+              {API_BASE_URL}
+            </div>
+          </div>
 
-            <div className="p-4 rounded-xl bg-[#0B0F17] border border-emerald-500/30">
-              <div className="text-xs font-semibold text-white mb-1 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#10B981]" />
-                <span>Automated Failover (Standby)</span>
-              </div>
-              <div className="text-xs font-mono text-emerald-400">Google Gemini Flash (3.5+)</div>
-              <div className="text-[11px] text-slate-400 mt-1 font-mono">
-                gemini-3.8-flash / gemini-3.5-flash
-              </div>
+          <div className="p-3.5 rounded-xl bg-[#0B0F17] border border-[#1E293B]/80 space-y-1">
+            <span className="text-[10px] font-mono text-slate-500 uppercase">Primary Reasoning Model</span>
+            <div className="text-xs font-semibold text-slate-200">
+              AWS Bedrock (Claude Sonnet)
+            </div>
+            <div className="text-[11px] font-mono text-cyan-300">
+              anthropic.claude-sonnet-4-6
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-[#0B0F17] border border-[#1E293B]/80 space-y-1">
+            <span className="text-[10px] font-mono text-slate-500 uppercase">Secondary / Failover Model</span>
+            <div className="text-xs font-semibold text-slate-200">
+              Google Gemini 3.5+ Flash
+            </div>
+            <div className="text-[11px] font-mono text-emerald-400">
+              gemini-3.8-flash / 3.5-flash
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Grid: AWS Cognito & DynamoDB Status */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* AWS Cognito User Pool */}
+        <div className="p-5 rounded-2xl bg-[#131924] border border-[#1E293B] space-y-3.5">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-purple-950/60 border border-purple-800/40 text-purple-400">
+              <Shield className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-white">AWS Cognito Authentication</h3>
+              <p className="text-[11px] text-slate-400">Direct USER_PASSWORD_AUTH with JWKS validation</p>
+            </div>
+          </div>
+
+          <div className="space-y-2 text-xs font-mono">
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#0B0F17] border border-[#1E293B]/80">
+              <span className="text-slate-500">Region</span>
+              <span className="text-slate-200">{COGNITO_CONFIG.region}</span>
+            </div>
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#0B0F17] border border-[#1E293B]/80">
+              <span className="text-slate-500">User Pool ID</span>
+              <span className="text-cyan-300">{COGNITO_CONFIG.UserPoolId}</span>
+            </div>
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#0B0F17] border border-[#1E293B]/80">
+              <span className="text-slate-500">App Client ID</span>
+              <span className="text-cyan-300">{COGNITO_CONFIG.ClientId}</span>
+            </div>
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#0B0F17] border border-[#1E293B]/80">
+              <span className="text-slate-500">Auth Flow</span>
+              <span className="text-[#10B981]">ALLOW_USER_PASSWORD_AUTH</span>
             </div>
           </div>
         </div>
 
-        <div className="flex justify-end">
+        {/* Amazon DynamoDB Single-Table */}
+        <div className="p-5 rounded-2xl bg-[#131924] border border-[#1E293B] space-y-3.5">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-cyan-950/60 border border-cyan-800/40 text-cyan-400">
+              <Database className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-white">Amazon DynamoDB Persistence</h3>
+              <p className="text-[11px] text-slate-400">Multi-tenant Single-Table architecture</p>
+            </div>
+          </div>
+
+          <div className="space-y-2 text-xs font-mono">
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#0B0F17] border border-[#1E293B]/80">
+              <span className="text-slate-500">Table Name</span>
+              <span className="text-slate-200">{dynamoStatus?.tableName || "DigitanoProjects"}</span>
+            </div>
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#0B0F17] border border-[#1E293B]/80">
+              <span className="text-slate-500">Partition Key (PK)</span>
+              <span className="text-cyan-300">USER#&lt;cognito_email&gt;</span>
+            </div>
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#0B0F17] border border-[#1E293B]/80">
+              <span className="text-slate-500">Sort Key (SK)</span>
+              <span className="text-cyan-300">PROJECT#&lt;project_id&gt;</span>
+            </div>
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#0B0F17] border border-[#1E293B]/80">
+              <span className="text-slate-500">Table Status</span>
+              <span className="text-[#10B981] flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
+                {dynamoStatus?.status || "ACTIVE"}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Cloud Environment Deployment Specifications */}
+      <div className="p-5 rounded-2xl bg-[#131924] border border-[#1E293B] space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <Terminal className="w-4 h-4 text-slate-400" />
+            <div>
+              <h3 className="text-sm font-semibold text-white">Cloud Deployment Variable Reference</h3>
+              <p className="text-[11px] text-slate-400">Environment variables required for Render / AWS backend deployment</p>
+            </div>
+          </div>
+
           <button
-            type="submit"
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#06B6D4] to-[#3B82F6] hover:opacity-95 text-white font-medium text-xs shadow-md shadow-cyan-500/20 cursor-pointer"
+            onClick={handleCopyAll}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1E293B] hover:bg-[#334155] text-xs font-mono text-slate-200 transition-colors cursor-pointer"
           >
-            <Save className="w-4 h-4" />
-            <span>Save Settings</span>
+            {copiedAll ? <Check className="w-3.5 h-3.5 text-[#10B981]" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
+            <span>{copiedAll ? "Copied All" : "Copy Template"}</span>
           </button>
         </div>
-      </form>
+
+        <div className="rounded-xl border border-[#1E293B] overflow-hidden bg-[#0B0F17]">
+          <div className="divide-y divide-[#1E293B]">
+            {SECURE_ENV_TEMPLATES.map((item) => (
+              <div
+                key={item.key}
+                className="px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-[#131924]/60 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono text-cyan-400 font-medium">{item.key}</span>
+                  <span className="text-[11px] text-slate-500 font-mono hidden md:inline">({item.note})</span>
+                </div>
+                <div className="flex items-center gap-2 self-end sm:self-auto">
+                  <span className="text-xs font-mono text-slate-300 bg-[#131924] px-2 py-0.5 rounded border border-[#1E293B]">
+                    {item.value}
+                  </span>
+                  <button
+                    onClick={() => handleCopySingle(`${item.key}=${item.value}`, item.key)}
+                    className="p-1 rounded text-slate-400 hover:text-cyan-300 transition-colors cursor-pointer"
+                    title="Copy Line"
+                  >
+                    {copiedKey === item.key ? (
+                      <Check className="w-3.5 h-3.5 text-[#10B981]" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

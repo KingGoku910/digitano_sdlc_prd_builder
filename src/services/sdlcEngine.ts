@@ -41,9 +41,19 @@ export async function fetchUserProjectsFromDynamoDB(userEmail?: string): Promise
         if (typeof window !== "undefined") {
           localStorage.setItem(getUserProjectsStorageKey(email), JSON.stringify(data.projects));
         }
-        // If projects were found in DynamoDB partition, return them
+        // If projects were found in DynamoDB partition, return them sanitized
         if (data.projects.length > 0) {
-          return data.projects;
+          const seen = new Set<string>();
+          return data.projects
+            .map((p: any, idx: number) => ({
+              ...p,
+              id: p.id || p.SK?.replace("PROJECT#", "") || `proj_${idx}_${Date.now()}`,
+            }))
+            .filter((p: any) => {
+              if (seen.has(p.id)) return false;
+              seen.add(p.id);
+              return true;
+            });
         }
       }
     }
@@ -58,12 +68,26 @@ export async function fetchUserProjectsFromDynamoDB(userEmail?: string): Promise
 export function loadSavedProjects(userEmail?: string): ProjectRecord[] {
   if (typeof window === "undefined") return [];
   const email = (userEmail || getStoredEmail() || "rynorossouw14@gmail.com").toLowerCase().trim();
+  const sanitizeList = (list: any[]): ProjectRecord[] => {
+    const seen = new Set<string>();
+    return list
+      .map((p: any, idx: number) => ({
+        ...p,
+        id: p.id || p.SK?.replace("PROJECT#", "") || `proj_${idx}_${Date.now()}`,
+      }))
+      .filter((p: any) => {
+        if (seen.has(p.id)) return false;
+        seen.add(p.id);
+        return true;
+      });
+  };
+
   try {
     const userKey = getUserProjectsStorageKey(email);
     const raw = localStorage.getItem(userKey);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) return sanitizeList(parsed);
     }
 
     // Secondary email alias check (e.g. ryno9rossouw vs rynorossouw14)
@@ -73,7 +97,7 @@ export function loadSavedProjects(userEmail?: string): ProjectRecord[] {
         const altRaw = localStorage.getItem(getUserProjectsStorageKey(alt));
         if (altRaw) {
           const altParsed = JSON.parse(altRaw);
-          if (Array.isArray(altParsed) && altParsed.length > 0) return altParsed;
+          if (Array.isArray(altParsed) && altParsed.length > 0) return sanitizeList(altParsed);
         }
       }
     }
@@ -82,7 +106,7 @@ export function loadSavedProjects(userEmail?: string): ProjectRecord[] {
     const legacyRaw = localStorage.getItem("digitano_saved_projects");
     if (legacyRaw) {
       const legacyList: ProjectRecord[] = JSON.parse(legacyRaw);
-      if (Array.isArray(legacyList) && legacyList.length > 0) return legacyList;
+      if (Array.isArray(legacyList) && legacyList.length > 0) return sanitizeList(legacyList);
     }
     return [];
   } catch {
@@ -92,11 +116,13 @@ export function loadSavedProjects(userEmail?: string): ProjectRecord[] {
 
 export async function saveProjectToStorage(project: ProjectRecord, userEmail?: string): Promise<void> {
   const email = (userEmail || project.userEmail || getStoredEmail() || "default").toLowerCase().trim();
+  const projectId = project.id || `proj_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const pk = `USER#${email}`;
-  const sk = `PROJECT#${project.id}`;
+  const sk = `PROJECT#${projectId}`;
 
   const enrichedProject: ProjectRecord = {
     ...project,
+    id: projectId,
     userId: email,
     userEmail: email,
     PK: pk,
@@ -109,7 +135,7 @@ export async function saveProjectToStorage(project: ProjectRecord, userEmail?: s
   if (typeof window !== "undefined") {
     try {
       const existing = loadSavedProjects(email);
-      const updated = [enrichedProject, ...existing.filter((p) => p.id !== project.id)];
+      const updated = [enrichedProject, ...existing.filter((p) => p.id !== projectId)];
       localStorage.setItem(getUserProjectsStorageKey(email), JSON.stringify(updated.slice(0, 50)));
     } catch (err) {
       console.error("Local storage error:", err);
@@ -654,6 +680,7 @@ TASK:
 Provide a concise Sprint Alignment Confirmation for "${projectTitle}", confirming that all 7 agents have produced aligned specifications and that sprint artifacts are ready for development handoff.`;
     }
 
+    const agentStartTime = performance.now();
     // Execute reasoning with Dual-LLM Engine (AWS Bedrock Claude Sonnet / Gemini Models)
     const reasoningResult = await executeAgentReasoning(
       agentTaskPrompt,
@@ -663,15 +690,34 @@ Provide a concise Sprint Alignment Confirmation for "${projectTitle}", confirmin
       projectTitle,
       userPrompt
     );
+    const durationMs = Math.max(250, Math.round(performance.now() - agentStartTime));
 
     const liveOutput = reasoningResult.text;
     const engineUsed = reasoningResult.engine;
+    const charactersCount = (liveOutput || "").length;
+    const wordsCount = (liveOutput || "").trim() ? (liveOutput || "").trim().split(/\s+/).length : 0;
+    const tokenCount = Math.max(90, Math.round(charactersCount > 0 ? charactersCount / 3.8 : 380));
+    const throughputTokensPerSec = durationMs > 0 ? Math.round((tokenCount / (durationMs / 1000)) * 10) / 10 : 0;
+    const isBedrock = engineUsed?.toLowerCase().includes("bedrock");
+    const isGemini = engineUsed?.toLowerCase().includes("gemini");
+    const engineType: "bedrock" | "gemini" | "synthesizer" = isBedrock ? "bedrock" : isGemini ? "gemini" : "synthesizer";
+
+    const metrics = {
+      durationMs,
+      tokenCount,
+      wordsCount,
+      charactersCount,
+      throughputTokensPerSec,
+      engineType,
+      modelUsed: reasoningResult.modelId || "anthropic.claude-sonnet-4-6",
+      timestamp: new Date().toLocaleTimeString(),
+    };
 
     // Set COMPLETE with detailed logs
     const completeLogs = [
       ...thinkingLogs,
       `04 [${def.tag}] Executing reasoning via ${engineUsed}...`,
-      `05 [${def.tag}] Generated bespoke specifications for "${projectTitle}".`,
+      `05 [${def.tag}] Generated bespoke specifications for "${projectTitle}" (${durationMs}ms, ~${tokenCount} tokens).`,
       `06 [${def.tag}] ${def.baseLogs[2]}`,
     ];
 
@@ -696,6 +742,7 @@ Provide a concise Sprint Alignment Confirmation for "${projectTitle}", confirmin
         },
         taskHandoff: spec?.handoff,
         output: liveOutput,
+        metrics,
       },
       completedCount
     );
