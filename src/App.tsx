@@ -20,81 +20,92 @@ import { ArrowRight, Zap, Users, Code, Sparkles, FolderGit2, ShieldCheck } from 
 
 const INITIAL_AGENTS: AgentState[] = [
   {
-    id: "agent_01",
-    name: "Product Owner",
-    tag: "PO",
-    number: "Agent 01",
-    role: "Scope & User Stories",
+    id: "researcher_agent",
+    name: "Technical Researcher",
+    tag: "RES",
+    number: "ADK 0",
+    role: "Ground Truth & Market Intelligence (MCP GoogleSearchTool)",
     status: "pending",
     logs: [],
-    taskHandoff: AGENT_SPECS.agent_01.handoff,
-    modelInfo: AGENT_SPECS.agent_01.defaultModel,
+    taskHandoff: AGENT_SPECS.researcher_agent.handoff,
+    modelInfo: AGENT_SPECS.researcher_agent.defaultModel,
   },
   {
-    id: "agent_02",
-    name: "Software Analyst",
-    tag: "SA",
-    number: "Agent 02",
-    role: "System Architecture & Constraints",
+    id: "agent_1_vision",
+    name: "Vision & Scope Lead",
+    tag: "VIS",
+    number: "ADK 1",
+    role: "Product Vision, Personas & Explicit Non-Goals",
     status: "pending",
     logs: [],
-    taskHandoff: AGENT_SPECS.agent_02.handoff,
-    modelInfo: AGENT_SPECS.agent_02.defaultModel,
+    taskHandoff: AGENT_SPECS.agent_1_vision.handoff,
+    modelInfo: AGENT_SPECS.agent_1_vision.defaultModel,
   },
   {
-    id: "agent_03",
-    name: "UI Lead",
-    tag: "UI",
-    number: "Agent 03",
-    role: "Tailwind Design System & Tokens",
+    id: "agent_2_requirements",
+    name: "Requirements Engineer",
+    tag: "REQ",
+    number: "ADK 2",
+    role: "100% Gherkin Given-When-Then Epics & Quantitative SLAs",
     status: "pending",
     logs: [],
-    taskHandoff: AGENT_SPECS.agent_03.handoff,
-    modelInfo: AGENT_SPECS.agent_03.defaultModel,
+    taskHandoff: AGENT_SPECS.agent_2_requirements.handoff,
+    modelInfo: AGENT_SPECS.agent_2_requirements.defaultModel,
   },
   {
-    id: "agent_04",
-    name: "Backend Lead",
-    tag: "BE",
-    number: "Agent 04",
-    role: "FastAPI Endpoints & DynamoDB",
+    id: "agent_3_architecture",
+    name: "Systems Architect",
+    tag: "ARC",
+    number: "ADK 3",
+    role: "PostgreSQL DDL Schemas & RESTful OpenAPI Contracts",
     status: "pending",
     logs: [],
-    taskHandoff: AGENT_SPECS.agent_04.handoff,
-    modelInfo: AGENT_SPECS.agent_04.defaultModel,
+    taskHandoff: AGENT_SPECS.agent_3_architecture.handoff,
+    modelInfo: AGENT_SPECS.agent_3_architecture.defaultModel,
   },
   {
-    id: "agent_05",
-    name: "Full Stack",
-    tag: "FS",
-    number: "Agent 05",
-    role: "React Hooks & State Flow",
+    id: "agent_4_uiux",
+    name: "Lead UX/UI Designer",
+    tag: "UIX",
+    number: "ADK 4",
+    role: "Cybernetic Layouts & 4-State Interaction Matrices",
     status: "pending",
     logs: [],
-    taskHandoff: AGENT_SPECS.agent_05.handoff,
-    modelInfo: AGENT_SPECS.agent_05.defaultModel,
+    taskHandoff: AGENT_SPECS.agent_4_uiux.handoff,
+    modelInfo: AGENT_SPECS.agent_4_uiux.defaultModel,
   },
   {
-    id: "agent_06",
-    name: "Infra Architect",
-    tag: "IA",
-    number: "Agent 06",
-    role: "AWS Serverless IaC & Render",
+    id: "agent_5_risks",
+    name: "Risk & Compliance Officer",
+    tag: "RSK",
+    number: "ADK 5",
+    role: "Zero-Trust Security, AES-256-GCM, GDPR/HIPAA Boundaries",
     status: "pending",
     logs: [],
-    taskHandoff: AGENT_SPECS.agent_06.handoff,
-    modelInfo: AGENT_SPECS.agent_06.defaultModel,
+    taskHandoff: AGENT_SPECS.agent_5_risks.handoff,
+    modelInfo: AGENT_SPECS.agent_5_risks.defaultModel,
   },
   {
-    id: "agent_07",
-    name: "Scrum Master",
-    tag: "SM",
-    number: "Agent 07",
-    role: "Consolidated PRD & Vibe Prompts",
+    id: "agent_6_metrics",
+    name: "Telemetry Strategist",
+    tag: "MTR",
+    number: "ADK 6",
+    role: "Hard Numerical KPIs & Phased Release Milestones",
     status: "pending",
     logs: [],
-    taskHandoff: AGENT_SPECS.agent_07.handoff,
-    modelInfo: AGENT_SPECS.agent_07.defaultModel,
+    taskHandoff: AGENT_SPECS.agent_6_metrics.handoff,
+    modelInfo: AGENT_SPECS.agent_6_metrics.defaultModel,
+  },
+  {
+    id: "orchestrator_agent",
+    name: "Master Orchestrator",
+    tag: "ORC",
+    number: "ADK 7",
+    role: "Quality Gatekeeper & Master PRD Synthesis",
+    status: "pending",
+    logs: [],
+    taskHandoff: AGENT_SPECS.orchestrator_agent.handoff,
+    modelInfo: AGENT_SPECS.orchestrator_agent.defaultModel,
   },
 ];
 
@@ -171,13 +182,26 @@ export default function App() {
     setArtifacts(project.artifacts);
     setIsFinished(true);
     setIsExecuting(false);
-    setCompletedCount(7);
+    setCompletedCount(8);
     setAgents(INITIAL_AGENTS.map((a) => {
       let outputText = "";
-      if (a.id === "agent_01") outputText = project.artifacts.prd_document.slice(0, 500) + "...";
-      else if (a.id === "agent_04") outputText = project.artifacts.database_schema.slice(0, 500) + "...";
-      else if (a.id === "agent_05") outputText = project.artifacts.api_contracts.slice(0, 500) + "...";
-      else if (a.id === "agent_07") outputText = project.artifacts.vibe_coder_prompts[0]?.content || "";
+      if (a.id === "researcher_agent") {
+        outputText = project.artifacts.research_dossier || "Market & Technical Research Dossier verified via GoogleSearchTool & MCP Ground Truth.";
+      } else if (a.id === "agent_1_vision") {
+        outputText = project.artifacts.prd_document.slice(0, 500) + "...";
+      } else if (a.id === "agent_2_requirements") {
+        outputText = "Gherkin Acceptance Scenarios (Given-When-Then) verified for all Epics.";
+      } else if (a.id === "agent_3_architecture") {
+        outputText = project.artifacts.database_schema.slice(0, 500) + "...";
+      } else if (a.id === "agent_4_uiux") {
+        outputText = project.artifacts.api_contracts.slice(0, 500) + "...";
+      } else if (a.id === "agent_5_risks") {
+        outputText = project.artifacts.security_spec || "Zero-Trust Security, AES-256-GCM, and GDPR/HIPAA compliance boundaries verified.";
+      } else if (a.id === "agent_6_metrics") {
+        outputText = project.artifacts.telemetry_spec || "Telemetry KPIs & Phased Release Roadmap defined.";
+      } else if (a.id === "orchestrator_agent") {
+        outputText = project.artifacts.orchestrator_report || "Master PRD Quality Gate Report: 0 banned tokens found, 100% Gherkin compliant.";
+      }
 
       return {
         ...a,

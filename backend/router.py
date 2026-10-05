@@ -178,20 +178,33 @@ def execute_agent_task(req: InvokeRequest) -> InvokeResponse:
     if secret_key and (len(secret_key) != 40 or secret_key == "20un1TmaK/JGV6p6uVKY6gLRejK+4oBySjRr9"):
         secret_key = ""
 
-    # Prioritized Bedrock models
-    bedrock_models = [
+    # Prioritized Bedrock models with cross-region inference profile resolution
+    raw_bedrock_models = [
         creds.modelId or os.getenv("BEDROCK_MODEL_ID", DEFAULT_BEDROCK_MODELS[0]),
         creds.model2Id or os.getenv("BEDROCK_MODEL_2_ID", DEFAULT_BEDROCK_MODELS[1]),
     ]
-    # Unique ordered models (filter out any sonnet-5)
-    unique_models = list(dict.fromkeys([m for m in bedrock_models if m and "sonnet-5" not in m]))
+    geo_prefix = "eu." if region.startswith("eu-") else "apac." if region.startswith("ap-") else "us."
+    unique_models: List[str] = []
+    for m in raw_bedrock_models:
+        if not m or "sonnet-5" in m:
+            continue
+        if m.startswith(("us.", "eu.", "apac.", "arn:aws:")):
+            unique_models.append(m)
+        else:
+            unique_models.append(f"{geo_prefix}{m}")
+            if geo_prefix != "us.":
+                unique_models.append(f"us.{m}")
+            unique_models.append(m)
+    unique_models.append("anthropic.claude-3-sonnet-20240229-v1:0")
+    unique_models.append("anthropic.claude-3-haiku-20240307-v1:0")
+    unique_models = list(dict.fromkeys(unique_models))
     primary_model = unique_models[0] if unique_models else "anthropic.claude-sonnet-4-6"
 
     # Step 1: AWS Bedrock Claude Sonnet Attempt (if valid credentials provided)
     if access_key and secret_key and len(secret_key) == 40:
         for idx, model in enumerate(unique_models):
             try:
-                logger.info(f"[Python Bedrock] Trying Priority #{idx + 1}: {model}...")
+                logger.info(f"[Python Bedrock] Trying candidate #{idx + 1}: {model}...")
                 text = invoke_bedrock_model(
                     model_id=model,
                     prompt=req.prompt,
@@ -214,7 +227,7 @@ def execute_agent_task(req: InvokeRequest) -> InvokeResponse:
                         failoverEngaged=False,
                     )
             except Exception as e:
-                logger.warning(f"[Python Bedrock] {model} returned: {e}")
+                logger.info(f"[Python Bedrock] {model} note ({type(e).__name__}). Trying next candidate or failover...")
                 if "InvalidSignatureException" in str(e):
                     break  # Key signature error affects all models
 

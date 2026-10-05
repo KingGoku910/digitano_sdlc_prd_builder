@@ -87,3 +87,15 @@ export async function fetchProjectById(projectId: string) {
   const response = await apiClient.get(`/api/projects/${projectId}`);
   return response.data;
 }
+
+/**
+ * Triggers pure sequential ADK + Bedrock / Gemini PRD generation pipeline
+ */
+export async function generatePRDViaADK(productName: string, rawBrief: string) {
+  const response = await apiClient.post("/api/generate-prd", {
+    product_name: productName,
+    raw_brief: rawBrief,
+  });
+  return response.data;
+}
+

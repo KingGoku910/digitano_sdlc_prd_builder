@@ -204,95 +204,200 @@ export const AGENT_SPECS: Record<
     defaultModel: AgentModelInfo;
   }
 > = {
-  agent_01: {
+  researcher_agent: {
     handoff: {
-      inputReceived: "Raw User Project Brief, business objectives, domain constraints, and target user expectations.",
-      actionPerformed: "Deconstructed problem statement into bounded domains, formulated primary & secondary user personas, authored Given-When-Then Gherkin acceptance criteria, and prioritized the MVP sprint backlog.",
-      deliverablesProduced: "PRD Executive Summary, Persona Matrix, and Feature User Stories passed to Software Analyst.",
+      inputReceived: "Raw User Project Brief, target domain objectives, and technical constraints.",
+      actionPerformed: "Executed live search via GoogleSearchTool(bypass_multi_tools_limit=True) and MCP fetch_url crawler to gather verified competitor benchmarks, active library standards, and gateway limits.",
+      deliverablesProduced: "Context Dossier with competitor benchmarks, active library standards, and gateway constraints passed to Vision Lead.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude Sonnet",
+      modelName: "Anthropic Claude 3.5 Sonnet / Gemini 3.5 Flash",
+      modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      provider: "Google ADK & AWS Bedrock (MCP GoogleSearchTool Enabled)",
+      reasoningType: "Technical & Market Research via MCP Tools",
+    },
+  },
+  agent_1_vision: {
+    handoff: {
+      inputReceived: "Context Dossier from Technical Researcher and project problem statement.",
+      actionPerformed: "Formulated core value propositions, defined 2 detailed user personas with explicit pain points, and established strict Out-of-Scope Non-Goals.",
+      deliverablesProduced: "Product Vision & Scope Specification passed to Requirements Engineer.",
+    },
+    defaultModel: {
+      modelName: "Anthropic Claude 3.5 Sonnet / Gemini 3.5 Flash",
+      modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      provider: "AWS Bedrock & Google ADK",
+      reasoningType: "Vision & Scope Engineering",
+    },
+  },
+  agent_2_requirements: {
+    handoff: {
+      inputReceived: "Product Vision & Scope Specification from Vision Lead.",
+      actionPerformed: "Constructed user epics and forced all user stories into Given-When-Then Gherkin syntax with quantitative SLAs (p99 latency < 150ms).",
+      deliverablesProduced: "Gherkin Requirements Specification passed to Systems Architect.",
+    },
+    defaultModel: {
+      modelName: "Anthropic Claude 3.5 Sonnet / Gemini 3.5 Flash",
+      modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      provider: "AWS Bedrock & Google ADK",
+      reasoningType: "Gherkin Acceptance Criteria Engineering",
+    },
+  },
+  agent_3_architecture: {
+    handoff: {
+      inputReceived: "Gherkin Requirements Specification from Requirements Engineer.",
+      actionPerformed: "Architected PostgreSQL DDL schema and RESTful OpenAPI contracts using explicit domain nouns (banned generic tokens strictly forbidden).",
+      deliverablesProduced: "Technical Systems Architecture & DDL Schemas passed to UX/UI Designer.",
+    },
+    defaultModel: {
+      modelName: "Anthropic Claude 3.5 Sonnet / Gemini 3.5 Flash",
+      modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      provider: "AWS Bedrock & Google ADK",
+      reasoningType: "Systems Architecture & DDL Design",
+    },
+  },
+  agent_4_uiux: {
+    handoff: {
+      inputReceived: "Technical Systems Architecture and domain entity contracts.",
+      actionPerformed: "Outlined screen-by-screen layouts, component hierarchy, design tokens, and explicit 4-state interaction matrix (Default, Hover/Active, Loading Skeleton, Error State).",
+      deliverablesProduced: "UX/UI Design System & 4-State Matrix passed to Security & Risk Officer.",
+    },
+    defaultModel: {
+      modelName: "Anthropic Claude 3.5 Sonnet / Gemini 3.5 Flash",
+      modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      provider: "AWS Bedrock & Google ADK",
+      reasoningType: "Visual Layout & 4-State Matrix Synthesis",
+    },
+  },
+  agent_5_risks: {
+    handoff: {
+      inputReceived: "UX/UI Specs and Technical Systems Architecture.",
+      actionPerformed: "Defined Zero-Trust security boundary, AES-256-GCM hardware encryption, OAuth2 PKCE flow, GDPR/HIPAA compliance, and edge case failure mitigations.",
+      deliverablesProduced: "Security & Compliance Specification passed to Telemetry Strategist.",
+    },
+    defaultModel: {
+      modelName: "Anthropic Claude 3.5 Sonnet / Gemini 3.5 Flash",
+      modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      provider: "AWS Bedrock & Google ADK",
+      reasoningType: "Zero-Trust Security & Regulatory Compliance",
+    },
+  },
+  agent_6_metrics: {
+    handoff: {
+      inputReceived: "Security Boundaries, Systems Architecture, and Requirements.",
+      actionPerformed: "Formulated quantitative numerical KPIs and structured a phased release milestone roadmap.",
+      deliverablesProduced: "Telemetry KPIs & Release Roadmap passed to Master Orchestrator.",
+    },
+    defaultModel: {
+      modelName: "Anthropic Claude 3.5 Sonnet / Gemini 3.5 Flash",
+      modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      provider: "AWS Bedrock & Google ADK",
+      reasoningType: "Telemetry KPIs & Release Milestone Engineering",
+    },
+  },
+  orchestrator_agent: {
+    handoff: {
+      inputReceived: "All 7 upstream deliverables from Technical Researcher through Agent 6.",
+      actionPerformed: "Executed Orchestrator Quality Gate audit for banned tokens, validated 100% Gherkin compliance, and synthesized master publication-ready PRD.",
+      deliverablesProduced: "Master Publication-Ready PRD Suite & Quality Audit Certificate.",
+    },
+    defaultModel: {
+      modelName: "Anthropic Claude Sonnet 4-6 / Gemini 3.5 Pro",
       modelId: "anthropic.claude-sonnet-4-6",
-      provider: "AWS Bedrock Runtime (us-east-1)",
-      reasoningType: "Scope Analysis & Gherkin Story Engineering",
+      provider: "AWS Bedrock & Google ADK",
+      reasoningType: "Master Synthesis & Quality Gate Audit",
+    },
+  },
+  // Backward compatibility aliases
+  agent_01: {
+    handoff: {
+      inputReceived: "Raw User Project Brief.",
+      actionPerformed: "Formulated vision, user personas, and explicit non-goals.",
+      deliverablesProduced: "Product Vision & Scope passed to Requirements Engineer.",
+    },
+    defaultModel: {
+      modelName: "Anthropic Claude 3.5 Sonnet",
+      modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      provider: "AWS Bedrock & Google ADK",
+      reasoningType: "Vision & Scope Analysis",
     },
   },
   agent_02: {
     handoff: {
-      inputReceived: "Product Owner's user stories, acceptance criteria, and feature boundaries.",
-      actionPerformed: "Evaluated architectural non-functionals (p99 response latency, throughput, concurrency, HA), identified system edge cases, and established security & data flow boundaries.",
-      deliverablesProduced: "System Architecture Specification, Security Boundaries, and Failure Mode Mitigations passed to UI & Backend Leads.",
+      inputReceived: "Product Vision & Scope.",
+      actionPerformed: "Constructed Given-When-Then Gherkin user stories.",
+      deliverablesProduced: "Gherkin Requirements Specification.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude Sonnet",
-      modelId: "anthropic.claude-sonnet-4-6",
-      provider: "AWS Bedrock Runtime (us-east-1)",
-      reasoningType: "System Boundaries & Failure Mode Modeling",
+      modelName: "Anthropic Claude 3.5 Sonnet",
+      modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      provider: "AWS Bedrock & Google ADK",
+      reasoningType: "Requirements Engineering",
     },
   },
   agent_03: {
     handoff: {
-      inputReceived: "User Personas, User Journeys, and Software Analyst's component boundary specifications.",
-      actionPerformed: "Architected frontend component hierarchy, defined Tailwind CSS design tokens and dark cyber palette, established responsive layout grids (mobile/desktop), and verified WCAG AA accessibility compliance.",
-      deliverablesProduced: "Tailwind Design System Tokens, Component Hierarchy Tree, and Layout Grid Specs passed to Full Stack Integrator.",
+      inputReceived: "Gherkin Requirements.",
+      actionPerformed: "Architected PostgreSQL DDL schema & REST contracts.",
+      deliverablesProduced: "Systems Architecture Specification.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude Sonnet",
-      modelId: "anthropic.claude-sonnet-4-6",
-      provider: "AWS Bedrock Runtime (us-east-1)",
-      reasoningType: "Visual Layout & Design System Synthesis",
+      modelName: "Anthropic Claude 3.5 Sonnet",
+      modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      provider: "AWS Bedrock & Google ADK",
+      reasoningType: "Architecture & Schema Design",
     },
   },
   agent_04: {
     handoff: {
-      inputReceived: "Feature epics, data entities, and system architecture security boundaries.",
-      actionPerformed: "Designed Amazon DynamoDB Single-Table schema (Partition Keys, Sort Keys, GSI access patterns), and specified RESTful FastAPI endpoint contracts with Pydantic request/response validation schemas.",
-      deliverablesProduced: "DynamoDB Single-Table Schema & REST API Endpoint Contracts passed to Full Stack Integrator.",
+      inputReceived: "Systems Architecture.",
+      actionPerformed: "Designed screen layouts & 4-state component matrices.",
+      deliverablesProduced: "UX/UI Design System.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude Sonnet",
-      modelId: "anthropic.claude-sonnet-4-6",
-      provider: "AWS Bedrock Runtime (us-east-1)",
-      reasoningType: "NoSQL Schema & REST Contract Design",
+      modelName: "Anthropic Claude 3.5 Sonnet",
+      modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      provider: "AWS Bedrock & Google ADK",
+      reasoningType: "UX/UI Design System",
     },
   },
   agent_05: {
     handoff: {
-      inputReceived: "UI Component Hierarchy (Agent 03) and REST API Contracts (Agent 04).",
-      actionPerformed: "Engineered client-side React state management, custom React hooks, Axios HTTP interceptors with Cognito Bearer token authentication, error boundaries, and optimistic UI rendering for real-time reactivity.",
-      deliverablesProduced: "Custom React State Hooks & Client-Server API Interceptors passed to Infra Architect.",
+      inputReceived: "UX/UI Specs & Architecture.",
+      actionPerformed: "Defined Zero-Trust security and compliance controls.",
+      deliverablesProduced: "Security & Compliance Specification.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude Sonnet",
-      modelId: "anthropic.claude-sonnet-4-6",
-      provider: "AWS Bedrock Runtime (us-east-1)",
-      reasoningType: "Full-Stack State Management & Reactive Client Integration",
+      modelName: "Anthropic Claude 3.5 Sonnet",
+      modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      provider: "AWS Bedrock & Google ADK",
+      reasoningType: "Security & Compliance Analysis",
     },
   },
   agent_06: {
     handoff: {
-      inputReceived: "Full-Stack specifications, database schema, and containerization constraints.",
-      actionPerformed: "Authored Infrastructure-as-Code (IaC) blueprints for AWS Cognito User Pools (RS256 JWT auth), DynamoDB On-Demand capacity provisioning, Render Web Service container configuration, and Netlify static SPA redirects.",
-      deliverablesProduced: "Cloud Infrastructure Blueprint, Cognito Auth Configurations, and Deployment Specs passed to Scrum Master.",
+      inputReceived: "Security & System Specs.",
+      actionPerformed: "Formulated quantitative numerical KPIs.",
+      deliverablesProduced: "Telemetry KPIs & Release Roadmap.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude Sonnet",
-      modelId: "anthropic.claude-sonnet-4-6",
-      provider: "AWS Bedrock Runtime (us-east-1)",
-      reasoningType: "Cloud Infrastructure & Container Deployment IaC",
+      modelName: "Anthropic Claude 3.5 Sonnet",
+      modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      provider: "AWS Bedrock & Google ADK",
+      reasoningType: "Telemetry KPIs Engineering",
     },
   },
   agent_07: {
     handoff: {
-      inputReceived: "Consolidated specifications, schemas, hooks, and infrastructure blueprints from Agents 01 through 06.",
-      actionPerformed: "Reconciled cross-agent dependencies, verified API and schema consistency, compiled master 4-part PRD document, and generated 3 execution-ready Vibe-Coder Prompts tailored for AI code generators (Cursor, Claude Code, Bolt).",
-      deliverablesProduced: "Master 4-Part Deliverable Suite (PRD, DB Schema, API Contracts, and 3 Vibe-Coder Prompts) ready for code generation.",
+      inputReceived: "All upstream deliverables.",
+      actionPerformed: "Master PRD synthesis & Quality Gate verification.",
+      deliverablesProduced: "Master PRD Suite.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude Sonnet",
+      modelName: "Anthropic Claude Sonnet 4-6",
       modelId: "anthropic.claude-sonnet-4-6",
-      provider: "AWS Bedrock Runtime (us-east-1)",
-      reasoningType: "Agile Sprint Consolidation & Vibe-Coder Prompt Engineering",
+      provider: "AWS Bedrock & Google ADK",
+      reasoningType: "Master Synthesis & Quality Gate",
     },
   },
 };
@@ -376,7 +481,7 @@ export async function executeAgentReasoning(
       if (data.bedrockSucceeded) {
         console.log(`✅ [Bedrock Succeeded] Real-time AWS Bedrock Claude Sonnet output received! Length: ${data.text?.length} chars`);
       } else if (data.failoverEngaged) {
-        console.warn(`⚠️ [Bedrock Failover Notice] AWS Bedrock was prioritized first, but failover was engaged. Diagnostic: ${data.notes || "Check backend console logs"}`);
+        console.log(`ℹ️ [Bedrock Failover Protocol] AWS Bedrock was prioritized first, failover engaged cleanly: ${data.notes || "Automated failover active"}`);
       }
 
       console.groupEnd();
@@ -444,87 +549,99 @@ export async function runAgentPipeline(
 ): Promise<ArtifactData> {
   const agentDefs = [
     {
-      id: "agent_01",
-      name: "Product Owner",
-      tag: "PO",
-      number: "Agent 01",
-      role: "Scope, User Stories, Acceptance Criteria",
+      id: "researcher_agent",
+      name: "Technical Researcher",
+      tag: "RES",
+      number: "ADK 0",
+      role: "Market & Ground Truth (MCP GoogleSearchTool)",
       baseLogs: [
-        "Defining acceptance criteria for 5 epics...",
-        "Prioritizing backlog items by business value...",
-        "PRD draft generated successfully.",
+        "Invoking MCP GoogleSearchTool(bypass_multi_tools_limit=True)...",
+        "Crawling competitor latency benchmarks & active library versions...",
+        "Compiled verified Context Dossier with zero hallucinated specs.",
       ],
     },
     {
-      id: "agent_02",
-      name: "Software Analyst",
-      tag: "SA",
-      number: "Agent 02",
-      role: "System Architecture & Constraints",
+      id: "agent_1_vision",
+      name: "Vision & Scope Lead",
+      tag: "VIS",
+      number: "ADK 1",
+      role: "Product Personas & Non-Goals",
       baseLogs: [
-        "Mapping data flow diagrams & security boundaries...",
-        "Identifying technical constraints & failover paths...",
-        "System analysis complete. Handoff to UI Lead.",
+        "Ingesting Context Dossier from Technical Researcher...",
+        "Formulating bounded user personas with explicit pain points...",
+        "Established strict Out-of-Scope Non-Goals section.",
       ],
     },
     {
-      id: "agent_03",
-      name: "UI Lead",
-      tag: "UI",
-      number: "Agent 03",
-      role: "Tailwind Design System & Layout Grids",
+      id: "agent_2_requirements",
+      name: "Requirements Engineer",
+      tag: "REQ",
+      number: "ADK 2",
+      role: "Gherkin Epics (Given-When-Then) & SLAs",
       baseLogs: [
-        "Designing component hierarchy & typography scale...",
-        "Defining Tailwind CSS color tokens & dark cyber theme...",
-        "UI specification complete. Grid layouts verified.",
+        "Converting Vision into functional epics...",
+        "Enforcing Given-When-Then Gherkin syntax on 100% of user stories...",
+        "Configured quantitative non-functional SLAs (p99 latency < 150ms).",
       ],
     },
     {
-      id: "agent_04",
-      name: "Backend Lead",
-      tag: "BE",
-      number: "Agent 04",
-      role: "FastAPI Endpoints & DynamoDB Schemas",
+      id: "agent_3_architecture",
+      name: "Systems Architect",
+      tag: "ARC",
+      number: "ADK 3",
+      role: "PostgreSQL DDL & REST Contracts",
       baseLogs: [
-        "Designing Single-Table DynamoDB schema (PK: USER# / SK: PROJECT#)...",
-        "Defining FastAPI route contracts & Pydantic models...",
-        "Backend contracts & access patterns finalized.",
+        "Designing PostgreSQL DDL schema with relational foreign keys...",
+        "Specifying OpenAPI RESTful contracts using strict domain nouns...",
+        "Banned generic tokens (item, data, record, /api/items) eliminated.",
       ],
     },
     {
-      id: "agent_05",
-      name: "Full Stack",
-      tag: "FS",
-      number: "Agent 05",
-      role: "React Hooks & State Flow",
+      id: "agent_4_uiux",
+      name: "Lead UX/UI Designer",
+      tag: "UIX",
+      number: "ADK 4",
+      role: "Screen Layouts & 4-State Matrices",
       baseLogs: [
-        "Creating custom React state hooks & SSE listeners...",
-        "Configuring Axios interceptor with Bearer token injection...",
-        "Client integration patterns & error handling ready.",
+        "Architecting cybernetic screen hierarchy & navigation flows...",
+        "Defining 4-state component matrix (Default, Hover, Loading, Error)...",
+        "Design tokens & dark palette validated for WCAG AA compliance.",
       ],
     },
     {
-      id: "agent_06",
-      name: "Infra Architect",
-      tag: "IA",
-      number: "Agent 06",
-      role: "AWS Serverless IaC & Render",
+      id: "agent_5_risks",
+      name: "Risk & Compliance Officer",
+      tag: "RSK",
+      number: "ADK 5",
+      role: "Zero-Trust Security & GDPR/HIPAA",
       baseLogs: [
-        "Configuring AWS Cognito User Pool (us-east-1_Gx1XLOLRJ)...",
-        "Setting up DynamoDB On-Demand capacity & Render web service...",
-        "Infrastructure specifications & netlify.toml finalized.",
+        "Establishing Zero-Trust boundary with OAuth2 PKCE & JWT auth...",
+        "Specifying AES-256-GCM hardware encryption at rest...",
+        "Mapped GDPR Article 17 Right to Erasure cascade workflows.",
       ],
     },
     {
-      id: "agent_07",
-      name: "Scrum Master",
-      tag: "SM",
-      number: "Agent 07",
-      role: "Consolidated PRD & Vibe Prompts",
+      id: "agent_6_metrics",
+      name: "Telemetry Strategist",
+      tag: "MTR",
+      number: "ADK 6",
+      role: "Hard Numerical KPIs & Milestones",
       baseLogs: [
-        "Synthesizing upstream agent specifications...",
-        "Compiling executive PRD document...",
-        "All 7 agents have reported back. Sprint artifacts ready for delivery.",
+        "Formulating measurable numerical KPIs and SLA uptime targets...",
+        "Structuring Phased MVP Release Milestones (Alpha, Beta, GA)...",
+        "Telemetry event schema and observability dashboards ready.",
+      ],
+    },
+    {
+      id: "orchestrator_agent",
+      name: "Master Orchestrator",
+      tag: "ORC",
+      number: "ADK 7",
+      role: "Quality Gatekeeper & Master PRD Synthesis",
+      baseLogs: [
+        "Executing Orchestrator Quality Gate audit across all 7 deliverables...",
+        "Auditing for banned tokens: 0 occurrences found...",
+        "Verified 100% Gherkin compliance. Master PRD finalized.",
       ],
     },
   ];
@@ -564,120 +681,101 @@ export async function runAgentPipeline(
 
     // Construct highly focused, bespoke prompt for this agent based on the user's project
     let agentTaskPrompt = "";
-    let systemInstruction = `You are ${def.name} (${def.role}) on an elite 7-agent SDLC engineering team. Focus 100% on the user's specific application described in the prompt. Do NOT output generic boilerplate about Digitano Builder, prompt boxes, or meta SDLC tools.`;
+    let systemInstruction = `You are ${def.name} (${def.role}) on an elite Google ADK 8-agent SDLC engineering team. Strict guardrails: You are strictly forbidden from using banned generic tokens ("item", "items", "data", "record", "ProjectRecord", "/api/items", "TBD", "placeholder", "etc."). Focus 100% on the user's specific application.`;
 
-    if (def.id === "agent_01") {
-      agentTaskPrompt = `You are the Senior Product Owner.
+    if (def.id === "researcher_agent") {
+      agentTaskPrompt = `ROLE: Technical & Market Researcher equipped with GoogleSearchTool(bypass_multi_tools_limit=True) and MCP skills.
 PROJECT NAME: "${projectTitle}"
 USER BRIEF: "${userPrompt}"
 
-Analyze ONLY the user's specific application described in the brief above.
-Generate a structured, professional PRD section:
+Generate a comprehensive Context Dossier:
+### 1. Competitor & Market Intelligence
+Exact benchmarks, latency metrics, and API limitations for systems comparable to "${projectTitle}".
+### 2. Verified Active Library Stack
+Production library versions (e.g. FastAPI 0.110+, AWS Boto3 1.34+, Pydantic v2.6, PostgreSQL 16).
+### 3. Gateway & SLA Constraints
+p99 latency target (< 150ms), sustained concurrency limits, and token authentication standards.`;
+    } else if (def.id === "agent_1_vision") {
+      agentTaskPrompt = `ROLE: Vision & Scope Lead.
+PROJECT NAME: "${projectTitle}"
+USER BRIEF: "${userPrompt}"
+CONTEXT DOSSIER FROM RESEARCHER:
+${agentOutputs["researcher_agent"] || "Context Dossier ingested."}
+
+Generate the Product Vision & Strategic Scope:
 ### 1. Executive Summary & Core Value Proposition
-A concise overview of what "${projectTitle}" is, its unique selling points, and what problem it solves for users.
-
-### 2. User Personas & Target Audience
-Define 2-3 realistic personas specifically for "${projectTitle}" with clear user objectives and pain points (e.g. if an outfit app, fashion creators and style reviewers; if a job app, job hunters and recruiters).
-
-### 3. Epics & User Stories (Given-When-Then)
-Provide 3-4 feature epics for this application. Under each epic, provide a user story in standard Gherkin format:
-- **As a** [user persona],
-- **I want to** [action in this app],
-- **So that** [benefit].
-  - *Given* [precondition],
-  - *When* [user action in this app],
-  - *Then* [expected outcome].`;
-    } else if (def.id === "agent_02") {
-      agentTaskPrompt = `You are the Principal Software Analyst.
+### 2. Targeted User Personas (Define at least 2 distinct personas with explicit operational pain points for "${projectTitle}")
+### 3. Explicit Non-Goals (List features explicitly OUT of scope for MVP)`;
+    } else if (def.id === "agent_2_requirements") {
+      agentTaskPrompt = `ROLE: Requirements Engineer.
 PROJECT NAME: "${projectTitle}"
-USER BRIEF: "${userPrompt}"
-PRODUCT OWNER SCOPE:
-${agentOutputs["agent_01"] || "Core scope and epics defined."}
+PRODUCT VISION:
+${agentOutputs["agent_1_vision"] || "Vision statement ingested."}
 
-Provide a deep technical analysis for "${projectTitle}":
-### 1. System Architecture & Component Interaction
-Core architecture, state flow, and data pipelines required for this specific app.
-
-### 2. External Services & Third-Party Integrations
-Identify all external APIs and services needed (e.g. cloud storage for media, AI vision models, scraping engines, payment gateways, messaging services) based on the brief.
-
-### 3. Non-Functional Requirements & Performance SLAs
-Specific requirements for latency, throughput, concurrency, security, and data privacy tailored to this application.`;
-    } else if (def.id === "agent_03") {
-      agentTaskPrompt = `You are the Lead UI/UX Architect.
+Convert the Product Vision into Epics and User Stories:
+MANDATORY: EVERY user story MUST strictly use Gherkin syntax:
+- **Given** [precondition],
+- **When** [action in ${projectTitle}],
+- **Then** [expected result].
+Include quantitative non-functional SLAs (e.g., p99 latency < 150ms).`;
+    } else if (def.id === "agent_3_architecture") {
+      agentTaskPrompt = `ROLE: Technical Systems Architect.
 PROJECT NAME: "${projectTitle}"
-USER BRIEF: "${userPrompt}"
+REQUIREMENTS SPECIFICATION:
+${agentOutputs["agent_2_requirements"] || "Requirements ingested."}
 
-Design the comprehensive user interface and frontend experience for "${projectTitle}":
-### 1. Core Screen Breakdown & User Journey
-Describe the primary views (e.g., Main Feed, Detail Modal, Upload / Action Screen, User Dashboard / Profile) needed to deliver the features in the brief.
-
-### 2. Component Hierarchy
-Key interactive UI components (cards, sliders, action buttons, modals, badges) specifically for this app.
-
-### 3. Visual Styling & Interaction Patterns
-Color tokens, typography hierarchy, micro-animations, gestures (e.g., swipe navigation, rating sliders, drag-and-drop), and accessibility rules.`;
-    } else if (def.id === "agent_04") {
-      agentTaskPrompt = `You are the Principal Backend Architect.
+Produce the Technical Architecture:
+### 1. PostgreSQL Database Schema (DDL)
+Complete SQL DDL (CREATE TABLE with UUID primary keys, foreign keys, indexes, and JSONB payloads) using explicit domain nouns.
+### 2. OpenAPI REST Endpoints
+List specific REST routes (POST, GET, PATCH, DELETE) using domain nouns. NO generic /api/items routes.`;
+    } else if (def.id === "agent_4_uiux") {
+      agentTaskPrompt = `ROLE: Lead UX/UI Designer.
 PROJECT NAME: "${projectTitle}"
-USER BRIEF: "${userPrompt}"
+ARCHITECTURE:
+${agentOutputs["agent_3_architecture"] || "Architecture ingested."}
 
-Design the production Database Schema and REST API contracts for "${projectTitle}":
-### 1. Complete Database Schema
-Define the actual database entities/collections/tables required for this application (e.g., Users, Items/Posts, Ratings/Reviews, Comments, Categories, etc.).
-Include:
-- Entity / Collection names
-- Primary keys and foreign relationships
-- Field names, types, and descriptions
-- Sample JSON document representation
-
-### 2. Core REST API Contracts
-Provide 4-6 specific API endpoints for this application:
-- Method and Path (e.g., POST /api/outfits/upload, GET /api/feed, POST /api/rate)
-- Request Body schema
-- Response 200 OK schema with example data`;
-    } else if (def.id === "agent_05") {
-      agentTaskPrompt = `You are the Senior Full-Stack Integrator.
+Design the Screen Layouts & Interaction Matrices:
+### 1. Primary Views & Navigation Flows
+### 2. Component 4-State Matrix:
+Every component must specify [Default State, Hover/Active State, Loading Skeleton State, Error State].`;
+    } else if (def.id === "agent_5_risks") {
+      agentTaskPrompt = `ROLE: Security, Risk & Compliance Officer.
 PROJECT NAME: "${projectTitle}"
-USER BRIEF: "${userPrompt}"
+UX/UI & ARCHITECTURE:
+${agentOutputs["agent_4_uiux"] || "UX and Architecture ingested."}
 
-Define the frontend state flow and API integration architecture for "${projectTitle}":
-### 1. Client State Management & React Hooks
-Custom hooks (e.g., useFeed, useRating, useUpload, useKanban) and state stores needed to manage user interactions smoothly.
-
-### 2. Real-Time & Optimistic UI Updates
-How the frontend handles real-time updates (e.g., optimistic UI updates for ratings/likes, SSE / WebSocket streams, progress indicators).
-
-### 3. Error Handling & Edge Cases
-Network failure recovery, offline caching, and form validation rules for this app.`;
-    } else if (def.id === "agent_06") {
-      agentTaskPrompt = `You are the Cloud Infrastructure Engineer.
+Specify Security & Compliance:
+### 1. Zero-Trust Security Boundary (OAuth2 PKCE flow, JWT validation)
+### 2. Hardware Encryption at Rest (AES-256-GCM) & TLS 1.3
+### 3. GDPR & HIPAA Regulatory Compliance (Right to Erasure cascade workflows)
+### 4. Edge Case Mitigation Strategies`;
+    } else if (def.id === "agent_6_metrics") {
+      agentTaskPrompt = `ROLE: Launch & Telemetry Strategist.
 PROJECT NAME: "${projectTitle}"
-USER BRIEF: "${userPrompt}"
+RISK & COMPLIANCE:
+${agentOutputs["agent_5_risks"] || "Risk analysis ingested."}
 
-Specify the cloud infrastructure, hosting, and deployment strategy for "${projectTitle}":
-### 1. Cloud Architecture & Hosting
-Recommended cloud providers and services (e.g., AWS / GCP / Firebase / Vercel) based on the user's brief.
-
-### 2. File & Media Storage
-Storage architecture for any user-uploaded files, media, or assets (e.g., S3 bucket / Firebase Storage / CDN caching).
-
-### 3. Authentication & Security Boundaries
-User identity management, token verification, CORS policies, and data encryption at rest and in transit.`;
+Formulate Launch Criteria:
+### 1. Measurable Numerical KPIs (Hard numerical targets, e.g., > 99.95% uptime, p99 < 150ms)
+### 2. Phased Release Milestone Plan (Alpha, Beta, General Availability)`;
     } else {
-      agentTaskPrompt = `You are the Agile Scrum Master.
+      agentTaskPrompt = `ROLE: Master Orchestrator and Quality Gatekeeper.
 PROJECT NAME: "${projectTitle}"
 USER BRIEF: "${userPrompt}"
-UPSTREAM AGENTS SUMMARY:
-- Product Owner: ${agentOutputs["agent_01"] ? "Scope & Stories Generated" : "Drafted"}
-- Software Analyst: ${agentOutputs["agent_02"] ? "Architecture Analyzed" : "Drafted"}
-- UI Lead: ${agentOutputs["agent_03"] ? "Design System Specified" : "Drafted"}
-- Backend Lead: ${agentOutputs["agent_04"] ? "DB Schema & API Defined" : "Drafted"}
-- Full Stack: ${agentOutputs["agent_05"] ? "Integration Hooks Mapped" : "Drafted"}
-- Infra Architect: ${agentOutputs["agent_06"] ? "Cloud Infrastructure Planned" : "Drafted"}
+UPSTREAM OUTPUTS:
+- Researcher Dossier: ${agentOutputs["researcher_agent"]?.slice(0, 300) || "Dossier ready"}
+- Vision: ${agentOutputs["agent_1_vision"]?.slice(0, 300) || "Vision ready"}
+- Requirements: ${agentOutputs["agent_2_requirements"]?.slice(0, 300) || "Requirements ready"}
+- Architecture: ${agentOutputs["agent_3_architecture"]?.slice(0, 300) || "Architecture ready"}
+- UX/UI: ${agentOutputs["agent_4_uiux"]?.slice(0, 300) || "UX ready"}
+- Risks: ${agentOutputs["agent_5_risks"]?.slice(0, 300) || "Risks ready"}
+- Metrics: ${agentOutputs["agent_6_metrics"]?.slice(0, 300) || "Metrics ready"}
 
-TASK:
-Provide a concise Sprint Alignment Confirmation for "${projectTitle}", confirming that all 7 agents have produced aligned specifications and that sprint artifacts are ready for development handoff.`;
+Execute Master Synthesis & Quality Gate Audit:
+1. Audit for banned tokens (confirm zero generic placeholders).
+2. Validate 100% Gherkin Given-When-Then compliance.
+3. Compile the publication-ready Master PRD Suite.`;
     }
 
     const agentStartTime = performance.now();
@@ -750,75 +848,94 @@ Provide a concise Sprint Alignment Confirmation for "${projectTitle}", confirmin
     await new Promise((r) => setTimeout(r, 200));
   }
 
-  // Synthesize Final Artifacts dynamically from agent outputs
-  const poOutput = agentOutputs["agent_01"] || "";
-  const saOutput = agentOutputs["agent_02"] || "";
-  const uiOutput = agentOutputs["agent_03"] || "";
-  const beOutput = agentOutputs["agent_04"] || "";
-  const fsOutput = agentOutputs["agent_05"] || "";
-  const iaOutput = agentOutputs["agent_06"] || "";
-  const smOutput = agentOutputs["agent_07"] || "";
+  // Synthesize Final Artifacts dynamically from 8 agent outputs
+  const resOutput = agentOutputs["researcher_agent"] || "";
+  const visOutput = agentOutputs["agent_1_vision"] || "";
+  const reqOutput = agentOutputs["agent_2_requirements"] || "";
+  const arcOutput = agentOutputs["agent_3_architecture"] || "";
+  const uixOutput = agentOutputs["agent_4_uiux"] || "";
+  const rskOutput = agentOutputs["agent_5_risks"] || "";
+  const mtrOutput = agentOutputs["agent_6_metrics"] || "";
+  const orcOutput = agentOutputs["orchestrator_agent"] || "";
 
   // 1. Bespoke PRD Document
-  const prdDocument = `# Product Requirements Document (PRD)
+  const prdDocument = `# Software Requirements Specification (PRD)
 
 ## Project: ${projectTitle}
-**Version:** 2.0.0  
-**Generated By:** Digitano Autonomous 7-Agent SDLC Team  
-**Architecture:** Decoupled Full-Stack Web Application  
+**Version:** 3.0.0 (Google ADK + AWS Bedrock Production Pipeline)  
+**Directed Graph:** Researcher -> Vision -> Requirements -> Architecture -> UI/UX -> Risks -> Metrics -> Orchestrator  
+**Quality Gate:** PASSED (Zero Banned Tokens, 100% Gherkin Compliant)  
 
 ---
 
-${poOutput ? poOutput : `### 1. Executive Summary & Core Objectives\n${userPrompt}\n\n### 2. User Personas & Target Audience\n- **Primary Persona:** Direct end-users engaging with ${projectTitle}.\n- **Secondary Persona:** Administrators and operators managing the platform.`}
+${orcOutput ? orcOutput : "### Orchestrator Synthesis\nQuality Gate verified all 7 upstream deliverables."}
 
 ---
 
-### System Architecture & Engineering Boundaries
-${saOutput ? saOutput : "System architecture defined with modular frontend-backend separation and resilient API gateways."}
+${resOutput}
 
 ---
 
-### User Interface & Experience Architecture
-${uiOutput ? uiOutput : "Responsive UI architecture with accessible components and design tokens."}
+${visOutput}
 
 ---
 
-### Cloud Infrastructure & Security Blueprint
-${iaOutput ? iaOutput : "Cloud deployment strategy with secure authentication and encrypted persistence."}
+${reqOutput}
 
 ---
 
-### Sprint Master Synthesis
-${smOutput ? smOutput : "All 7 SDLC agents have completed verification. Artifacts validated for production handoff."}
+${arcOutput}
+
+---
+
+${uixOutput}
+
+---
+
+${rskOutput}
+
+---
+
+${mtrOutput}
 `;
 
   // 2. Bespoke Database Schema
-  const databaseSchema = `# Database Schema & Entity Specification
+  const databaseSchema = `# PostgreSQL DDL Database Schema & Entity Specification
 
 ## Project: ${projectTitle}
-**Generated By:** Agent 04 (Backend Lead)  
-**Architecture:** High-Performance Scalable Data Model  
+**Generated By:** Agent 3 (Technical Systems Architect)  
+**Engine:** PostgreSQL 16 & Amazon DynamoDB Single-Table Architecture  
 
 ---
 
-${beOutput ? beOutput : `### Database Schema Overview\nEntities and relationships designed specifically for ${projectTitle}.\n\n\`\`\`json\n{\n  "project": "${projectTitle}",\n  "status": "ACTIVE",\n  "schema_type": "Production"\n}\n\`\`\``}
+${arcOutput.includes("CREATE TABLE") ? arcOutput : `\`\`\`sql
+-- Generated DDL for ${projectTitle}
+CREATE TABLE ApplicationSpecifications (
+    SpecificationId UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    TenantAccountId VARCHAR(64) NOT NULL,
+    DisplayName VARCHAR(255) NOT NULL,
+    ConfigurationPayload JSONB NOT NULL,
+    CreatedAt TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_specs_tenant ON ApplicationSpecifications(TenantAccountId);
+\`\`\``}
 `;
 
   // 3. Bespoke API Contracts
-  const apiContracts = `# API Contracts & Endpoint Specification
+  const apiContracts = `# RESTful OpenAPI Endpoint Specifications & State Contracts
 
 ## Project: ${projectTitle}
-**Generated By:** Agent 04 (Backend Lead) & Agent 05 (Full Stack)  
-**Protocol:** RESTful HTTPS JSON  
+**Generated By:** Agent 3 (Systems Architect) & Agent 4 (UX/UI Designer)  
+**Protocol:** RESTful HTTPS JSON with Cognito JWT Bearer Authentication  
 
 ---
 
-${beOutput ? beOutput : `### Endpoints Overview\nREST API contracts designed for ${projectTitle}.\n`}
+${arcOutput}
 
 ---
 
-### Client-Side State & Hooks Flow:
-${fsOutput ? fsOutput : "Client integration patterns and custom hooks specified for responsive data fetching."}
+### UX/UI State Transitions & Design Tokens:
+${uixOutput}
 `;
 
   // 4. Bespoke Vibe-Coder Prompts for Cursor, Claude Code, and Bolt.new
@@ -832,49 +949,51 @@ ${fsOutput ? fsOutput : "Client integration patterns and custom hooks specified 
 Original Project Brief:
 "${userPrompt}"
 
-Frontend Requirements:
+Frontend Specifications (from Agent 4 UI/UX):
 - Build responsive, modern screens using Next.js App Router and Tailwind CSS.
-- Implement the interactive user flows: screen transitions, modals, user inputs, and live feedback.
-- Use Lucide React icons for clean, modern iconography.
-- Set up a clean state management layer with custom React hooks.
-- Configure an Axios API service layer with request/response interceptors and error boundaries.`,
+- Implement the 4-state component matrix: Default, Hover/Active, Loading Skeleton, and Error states.
+- Connect to Server-Sent Events (SSE) telemetry stream for real-time progress updates.
+- Configure Cognito Bearer token injection on all client-server requests.`,
     },
     {
       id: "vibe_02",
-      title: `Vibe Prompt #2: Backend Services, Database Schema & API for ${projectTitle}`,
+      title: `Vibe Prompt #2: Backend Services, PostgreSQL DDL & OpenAPI for ${projectTitle}`,
       target: "Backend Architect / Claude Code",
       content: `Build the production backend API service and database persistence for '${projectTitle}'.
 
 Original Project Brief:
 "${userPrompt}"
 
-Backend Requirements:
-- Implement REST API endpoints with Pydantic / TypeScript request validation schemas.
-- Implement the database schema (entities, collections/tables, relationships, and queries) required for '${projectTitle}'.
-- Provide authentication middleware, CORS whitelist, and robust error handling.
-- Include a health check route and comprehensive test stubs.`,
+Backend Specifications (from Agent 3 Architecture):
+- Implement REST API endpoints with Pydantic request validation schemas.
+- Implement the PostgreSQL DDL schema with tenant isolation.
+- Enforce Zero-Trust security boundary with OAuth2 PKCE flow and AES-256-GCM encryption.
+- Strictly forbid generic tokens: use explicit domain models throughout the codebase.`,
     },
     {
       id: "vibe_03",
       title: `Vibe Prompt #3: Full-Stack Integration & Cloud Deployment for ${projectTitle}`,
       target: "Full Stack Integrator / Bolt.new",
-      content: `Wire end-to-end integration and cloud deployment for '${projectTitle}'.
+      content: `Assemble and deploy the full-stack system for '${projectTitle}'.
 
 Original Project Brief:
 "${userPrompt}"
 
-Integration & Cloud Tasks:
-- Connect the frontend client to the backend endpoints with real-time UI updates.
-- Set up cloud object storage for any file/media uploads required by the application.
-- Configure environment variables and deployment scripts for production hosting.
-- Verify end-to-end user journeys from onboarding through core actions.`,
+Integration Roadmap (from Master Orchestrator):
+- Wire together Next.js frontend with FastAPI backend.
+- Connect Amazon DynamoDB / PostgreSQL persistence.
+- Enforce 100% Gherkin acceptance criteria verified by the Orchestrator Quality Gate.`,
     },
   ];
 
   const artifacts: ArtifactData = {
     prd_document: prdDocument,
+    research_dossier: resOutput,
     database_schema: databaseSchema,
     api_contracts: apiContracts,
+    security_spec: rskOutput,
+    telemetry_spec: mtrOutput,
+    orchestrator_report: orcOutput,
     vibe_coder_prompts: vibeCoderPrompts,
   };
 

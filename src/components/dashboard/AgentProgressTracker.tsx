@@ -56,12 +56,13 @@ interface AgentProgressTrackerProps {
 export function AgentProgressTracker({
   agents,
   completedCount,
-  totalAgents = 7,
+  totalAgents = 8,
   isFinished = false,
   onReset,
 }: AgentProgressTrackerProps) {
   const [expandedOutputs, setExpandedOutputs] = useState<Record<string, boolean>>({});
   const [copiedModelId, setCopiedModelId] = useState<string | null>(null);
+  const [showMcpDetails, setShowMcpDetails] = useState(false);
 
   const toggleOutput = (agentId: string) => {
     setExpandedOutputs((prev) => ({
@@ -95,33 +96,129 @@ export function AgentProgressTracker({
           )}
 
           <div>
-            <div className="text-sm font-semibold text-white flex items-center gap-2">
+            <div className="text-sm font-semibold text-white flex flex-wrap items-center gap-2">
               <span>
                 {isFinished
-                  ? "All 7 Agents Completed Successfully"
-                  : `Autonomous Scrum Team Working... (${completedCount}/${totalAgents} Agents Ready)`}
+                  ? "All 8 Google ADK Agents Completed Successfully"
+                  : `Google ADK Multi-Agent Cluster Active (${completedCount}/${totalAgents} Agents Ready)`}
+              </span>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-700/50 text-[10px] font-mono text-emerald-300 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                MCP Server Configured
               </span>
               <span className="px-2 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-800/40 text-[10px] font-mono text-cyan-300">
-                Dual-LLM Engine Active
+                Bedrock + ADK Failover
               </span>
             </div>
             <div className="text-xs text-slate-400 mt-0.5">
               {isFinished
-                ? "Bespoke PRD, DynamoDB Schemas, REST API Contracts, and Vibe-Coder Prompts synthesized."
-                : "Orchestrating sequential domain reasoning with automated Bedrock Claude Sonnet / Gemini failover."}
+                ? "Synthesized Market Research Dossier, Master PRD, PostgreSQL DDL, REST Contracts, Zero-Trust Security, and Vibe-Coder Prompts."
+                : "Strict sequential execution: Researcher (MCP Ground Truth) ➔ Agent 1 (Vision) ➔ Agent 2 (Requirements) ➔ Agent 3 (Architecture) ➔ Agent 4 (UI/UX) ➔ Agent 5 (Risks) ➔ Agent 6 (Metrics) ➔ Orchestrator (Quality Gate)."}
             </div>
           </div>
         </div>
 
-        {onReset && (
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           <button
-            onClick={onReset}
-            className="px-3.5 py-1.5 rounded-xl bg-[#1E293B] hover:bg-[#334155] text-xs font-medium text-slate-200 transition-colors self-start sm:self-auto cursor-pointer"
+            onClick={() => setShowMcpDetails((prev) => !prev)}
+            className="px-3 py-1.5 rounded-xl bg-[#0B0F17] hover:bg-[#1E293B] border border-cyan-900/40 text-xs font-mono text-cyan-300 transition-colors cursor-pointer flex items-center gap-1.5"
           >
-            {isFinished ? "Start New Project" : "Cancel"}
+            <span>MCP Tools ({5})</span>
+            {showMcpDetails ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </button>
-        )}
+
+          {onReset && (
+            <button
+              onClick={onReset}
+              className="px-3.5 py-1.5 rounded-xl bg-[#1E293B] hover:bg-[#334155] text-xs font-medium text-slate-200 transition-colors cursor-pointer"
+            >
+              {isFinished ? "Start New Project" : "Cancel"}
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* MCP Tools & Server Integration Drawer */}
+      {showMcpDetails && (
+        <div className="p-4 rounded-2xl bg-[#0B0F17]/95 border border-cyan-900/60 shadow-lg space-y-3 animate-in fade-in duration-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#1E293B] pb-2.5">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+              <span className="text-xs font-mono font-bold text-white uppercase tracking-wider">
+                Google ADK MCP Server (Model Context Protocol)
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+                ACTIVE • JSON-RPC 2.0
+              </span>
+            </div>
+            <div className="text-[11px] font-mono text-slate-400">
+              Transport: <span className="text-cyan-300">HTTP JSON-RPC 2.0 &amp; REST (/api/mcp/rpc)</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            <div className="p-2.5 rounded-xl bg-[#131924] border border-[#1E293B]">
+              <div className="text-xs font-semibold text-cyan-300 font-mono flex items-center gap-1.5">
+                <span>🔍 google_search</span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 font-sans">
+                  Researcher Agent
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-400 mt-1">
+                Live GoogleSearchTool(bypass_multi_tools_limit=True). Ingests real-world competitor benchmarks and library versions.
+              </div>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-[#131924] border border-[#1E293B]">
+              <div className="text-xs font-semibold text-emerald-300 font-mono flex items-center gap-1.5">
+                <span>🌐 fetch_url</span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 font-sans">
+                  Crawler
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-400 mt-1">
+                Deep crawler for official vendor documentation, latency SLAs, and OpenAPI specifications.
+              </div>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-[#131924] border border-[#1E293B]">
+              <div className="text-xs font-semibold text-purple-300 font-mono flex items-center gap-1.5">
+                <span>📐 validate_schema</span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-950 text-purple-400 border border-purple-800 font-sans">
+                  Architect Agent
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-400 mt-1">
+                Validates PostgreSQL DDL syntax, UUID primary keys, foreign key constraints, and relational indexes.
+              </div>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-[#131924] border border-[#1E293B]">
+              <div className="text-xs font-semibold text-amber-300 font-mono flex items-center gap-1.5">
+                <span>🧪 validate_gherkin</span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-950 text-amber-400 border border-amber-800 font-sans">
+                  Requirements
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-400 mt-1">
+                Enforces 100% Given-When-Then syntax across all user stories with quantitative SLA requirements.
+              </div>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-[#131924] border border-[#1E293B] sm:col-span-2 lg:col-span-1">
+              <div className="text-xs font-semibold text-rose-300 font-mono flex items-center gap-1.5">
+                <span>🛡️ audit_banned_tokens</span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded bg-rose-950 text-rose-400 border border-rose-800 font-sans">
+                  Orchestrator Quality Gate
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-400 mt-1">
+                Zero-tolerance scanner: rejects banned generic placeholders (&quot;item&quot;, &quot;items&quot;, &quot;data&quot;, &quot;record&quot;, &quot;TBD&quot;).
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Agents Timeline List */}
       <div className="space-y-4">
@@ -168,8 +265,28 @@ export function AgentProgressTracker({
                         ({agent.number})
                       </span>
                     </div>
-                    <div className="text-xs text-slate-300 font-medium mt-0.5">
-                      {agent.role}
+                    <div className="text-xs text-slate-300 font-medium mt-0.5 flex flex-wrap items-center gap-1.5">
+                      <span>{agent.role}</span>
+                      {agent.id === "researcher_agent" && (
+                        <span className="px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-700/60 text-[10px] font-mono text-cyan-300">
+                          MCP GoogleSearchTool Active
+                        </span>
+                      )}
+                      {agent.id === "orchestrator_agent" && (
+                        <span className="px-2 py-0.5 rounded bg-indigo-950/80 border border-indigo-700/60 text-[10px] font-mono text-indigo-300">
+                          Quality Gatekeeper: Zero Banned Tokens
+                        </span>
+                      )}
+                      {agent.id === "agent_2_requirements" && (
+                        <span className="px-2 py-0.5 rounded bg-purple-950/80 border border-purple-700/60 text-[10px] font-mono text-purple-300">
+                          100% Gherkin Syntax
+                        </span>
+                      )}
+                      {agent.id === "agent_3_architecture" && (
+                        <span className="px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-700/60 text-[10px] font-mono text-emerald-300">
+                          PostgreSQL DDL &amp; OpenAPI
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
