@@ -16,6 +16,7 @@ import { SettingsView } from "./components/SettingsView";
 import { ExportModal } from "./components/ExportModal";
 import { isAuthenticated, logoutUser } from "./config/aws-cognito";
 import { runAgentPipeline, ProjectRecord, AGENT_SPECS } from "./services/sdlcEngine";
+import { ProjectSpecificationInputs } from "./types/projectSpec";
 import { ArrowRight, Zap, Users, Code, Sparkles, FolderGit2, ShieldCheck } from "lucide-react";
 
 const INITIAL_AGENTS: AgentState[] = [
@@ -128,6 +129,7 @@ export default function App() {
   const [artifacts, setArtifacts] = useState<ArtifactData | null>(null);
   const [currentProjectTitle, setCurrentProjectTitle] = useState("");
   const [currentPrompt, setCurrentPrompt] = useState("");
+  const [currentSpecInputs, setCurrentSpecInputs] = useState<ProjectSpecificationInputs | null>(null);
 
   // Sync auth state on mount
   useEffect(() => {
@@ -136,10 +138,15 @@ export default function App() {
     }
   }, []);
 
-  const handleStartProject = async (prompt: string, title: string) => {
+  const handleStartProject = async (
+    prompt: string,
+    title: string,
+    specInputs?: ProjectSpecificationInputs
+  ) => {
     const projectId = "proj_" + Math.random().toString(36).substring(2, 9);
     setCurrentProjectTitle(title);
     setCurrentPrompt(prompt);
+    setCurrentSpecInputs(specInputs || null);
     setIsExecuting(true);
     setIsFinished(false);
     setArtifacts(null);
@@ -156,7 +163,8 @@ export default function App() {
             prev.map((a) => (a.id === updatedAgent.id ? updatedAgent : a))
           );
           setCompletedCount(count);
-        }
+        },
+        specInputs
       );
 
       setArtifacts(generatedArtifacts);
@@ -173,6 +181,7 @@ export default function App() {
     setIsFinished(false);
     setArtifacts(null);
     setCompletedCount(0);
+    setCurrentSpecInputs(null);
     setAgents(INITIAL_AGENTS.map((a) => ({ ...a, status: "pending", logs: [] })));
   };
 
@@ -186,7 +195,7 @@ export default function App() {
     setAgents(INITIAL_AGENTS.map((a) => {
       let outputText = "";
       if (a.id === "researcher_agent") {
-        outputText = project.artifacts.research_dossier || "Market & Technical Research Dossier verified via GoogleSearchTool & MCP Ground Truth.";
+        outputText = project.artifacts.research_report || project.artifacts.research_dossier || "Market & Technical Research Dossier verified via GoogleSearchTool & MCP Ground Truth.";
       } else if (a.id === "agent_1_vision") {
         outputText = project.artifacts.prd_document.slice(0, 500) + "...";
       } else if (a.id === "agent_2_requirements") {
@@ -468,6 +477,9 @@ export default function App() {
                         completedCount={completedCount}
                         isFinished={isFinished}
                         onReset={handleReset}
+                        specInputs={currentSpecInputs || undefined}
+                        projectPrompt={currentPrompt}
+                        projectTitle={currentProjectTitle}
                       />
 
                       {artifacts && (
@@ -475,6 +487,7 @@ export default function App() {
                           artifacts={artifacts}
                           projectTitle={currentProjectTitle}
                           userPrompt={currentPrompt}
+                          specInputs={currentSpecInputs || undefined}
                         />
                       )}
                     </div>

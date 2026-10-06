@@ -16,6 +16,15 @@ import {
 } from "lucide-react";
 import { CuteRobotAvatar } from "./CuteRobotAvatar";
 import { AgentPerformanceChart, AgentPerformanceMetrics } from "./AgentPerformanceChart";
+import { ProjectSpecificationInputs } from "../../types/projectSpec";
+import {
+  Layers,
+  Database,
+  Server,
+  Palette,
+  Bot as BotIcon,
+  FileText,
+} from "lucide-react";
 
 export interface AgentTaskHandoff {
   inputReceived: string;
@@ -51,6 +60,9 @@ interface AgentProgressTrackerProps {
   totalAgents?: number;
   isFinished?: boolean;
   onReset?: () => void;
+  specInputs?: ProjectSpecificationInputs;
+  projectPrompt?: string;
+  projectTitle?: string;
 }
 
 export function AgentProgressTracker({
@@ -59,6 +71,9 @@ export function AgentProgressTracker({
   totalAgents = 8,
   isFinished = false,
   onReset,
+  specInputs,
+  projectPrompt,
+  projectTitle,
 }: AgentProgressTrackerProps) {
   const [expandedOutputs, setExpandedOutputs] = useState<Record<string, boolean>>({});
   const [copiedModelId, setCopiedModelId] = useState<string | null>(null);
@@ -216,6 +231,60 @@ export function AgentProgressTracker({
                 Zero-tolerance scanner: rejects banned generic placeholders (&quot;item&quot;, &quot;items&quot;, &quot;data&quot;, &quot;record&quot;, &quot;TBD&quot;).
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* USER INPUTS & ARCHITECTURE REVIEW PANEL (Placed right below banner and before Technical Researcher) */}
+      {(specInputs || projectPrompt) && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-[#0F141F] via-[#131924] to-[#0F141F] border border-cyan-500/30 shadow-lg space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#1E293B] pb-2.5">
+            <div className="flex items-center gap-2">
+              <Layers className="w-4 h-4 text-cyan-400" />
+              <h3 className="text-xs font-mono font-bold text-white uppercase tracking-wider">
+                User Architecture Specifications &amp; Project Blueprint Review
+              </h3>
+            </div>
+            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-800/40">
+              Active Context for all 8 ADK Agents
+            </span>
+          </div>
+
+          {/* Grid of User Selections */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+            <div className="p-2.5 rounded-xl bg-[#0B0F17]/80 border border-[#1E293B]">
+              <span className="text-[10px] text-slate-400 font-mono block">Platform &amp; Frontend</span>
+              <span className="font-semibold text-white truncate block mt-0.5">
+                {specInputs?.projectType || "Web App"} · {specInputs?.frontend || "Next.js"}
+              </span>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-[#0B0F17]/80 border border-[#1E293B]">
+              <span className="text-[10px] text-slate-400 font-mono block">UI &amp; Styling</span>
+              <span className="font-semibold text-purple-300 truncate block mt-0.5">
+                {specInputs?.uiStyling?.join(", ") || "Tailwind CSS, shadcn/ui"}
+              </span>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-[#0B0F17]/80 border border-[#1E293B]">
+              <span className="text-[10px] text-slate-400 font-mono block">Backend &amp; Persistence</span>
+              <span className="font-semibold text-cyan-300 truncate block mt-0.5">
+                {specInputs?.backend || "Python (FastAPI)"} · {specInputs?.database?.join(", ") || "PostgreSQL 16"}
+              </span>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-[#0B0F17]/80 border border-[#1E293B]">
+              <span className="text-[10px] text-slate-400 font-mono block">AI Strategy &amp; Models</span>
+              <span className="font-semibold text-emerald-300 truncate block mt-0.5">
+                {specInputs?.aiIntegration?.models?.join(", ") || "Claude 3.7 + Gemini 3.8"} ({specInputs?.aiIntegration?.agentMode || "Multi-Agent"})
+              </span>
+            </div>
+          </div>
+
+          {/* Brief Snippet */}
+          <div className="p-2.5 rounded-xl bg-[#0B0F17]/60 border border-[#1E293B] text-[11px] text-slate-300 leading-relaxed font-sans">
+            <strong className="text-slate-400 font-mono">User Brief: </strong>
+            {specInputs?.description || projectPrompt || "Custom enterprise architecture specification"}
           </div>
         </div>
       )}

@@ -565,9 +565,127 @@ function resolveBedrockCandidates(requestedModels: (string | undefined)[], targe
   });
 
   // ==============================================================================
-  // MODEL CONTEXT PROTOCOL (MCP) SERVER & TOOLS REGISTRY
-  // Standard JSON-RPC 2.0 tool server for Google ADK agents & MCP skills
+  // PROMPT AUTO-IMPROVEMENT ENDPOINT (Context-Preserving SDLC Specification Enhancer)
+  // Preserves 100% of user domain, unique interactions, and tech stack choices
   // ==============================================================================
+  const handleImprovePrompt = async (req: express.Request, res: express.Response) => {
+    const { prompt, currentDescription, specInputs, projectName } = req.body;
+    const baseText = (currentDescription || prompt || '').trim();
+
+    if (!baseText) {
+      return res.status(400).json({ error: 'Description or prompt is required' });
+    }
+
+    const title = (projectName || specInputs?.projectName || 'Application Platform').trim();
+    const platform = specInputs?.projectType || 'Web App';
+    const frontend = specInputs?.frontend || 'Next.js (App Router)';
+    const ui = specInputs?.uiStyling?.join(', ') || 'Tailwind CSS, shadcn/ui';
+    const backend = specInputs?.backend || 'Python (FastAPI)';
+    const db = specInputs?.database?.join(', ') || 'PostgreSQL 16 + Redis';
+    const aiModels = specInputs?.aiIntegration?.models?.join(' and ') || 'Claude 3.5 Sonnet & GPT-4o Vision';
+    const agentMode = specInputs?.aiIntegration?.agentMode || 'Multi-Agent';
+
+    console.log(`\n🪄 [Auto-Improve Prompt] Analyzing user description (${baseText.length} chars) for "${title}"...`);
+
+    const systemInstruction = `You are a Principal Software Architect and Requirements Engineer on the Google ADK Multi-Agent team.
+Your task is to take the user's project description and enhance it into a comprehensive, high-context project specification.
+
+CRITICAL INSTRUCTION - STRICT PRESERVATION OF CONTEXT:
+1. You MUST read and analyze the EXACT application concept, features, UI interactions, and architecture provided by the user.
+2. PRESERVE 100% of the user's intended domain, unique mechanics, specific features, user interactions, styling tokens, and tech stack choices.
+   For example, if the user describes a fashion rating app with a TikTok/Tinder swipe feed, 0-10 rating sliders, outfit tags (e.g. Casual, Wedding, Clubbing), photo upload modal, Firebase Firestore DB, Cloud Storage, and AWS Bedrock Claude 3.5 Sonnet with GPT-4o vision failover, EVERY SINGLE ONE of these features, tokens, and flows MUST remain central to the enhanced description.
+3. UNDER NO CIRCUMSTANCES should you substitute or replace the user's concept with a generic template (e.g., DO NOT replace a fashion rating app with an e-commerce shopping cart, contract auditor, or medical clinic).
+4. EXPAND the user's specific idea with rich architectural depth:
+   - Core Concept & Product Vision (deepening the user's specific problem statement and core loop).
+   - Key Functional Features & Interactive UI Mechanics (detailing their specific screens, modals, feeds, gesture physics, sliders, bottom sheets, upload flows, visual critique overlays).
+   - Technical Stack & Architecture (incorporating their specified frontend, styling, backend, storage, database, primary/failover AI models).
+   - API Contracts & Data Flow (upload pipeline, vision analysis payload, storage lifecycle).
+   - Non-Functional SLAs (latency, 60fps swipe gesture responsiveness, zero-trust cloud storage).
+5. Forbid banned generic tokens (do NOT use 'item', 'items', 'data', 'record', 'ProjectRecord', '/api/items', 'TBD', 'placeholder'). Use explicit domain nouns throughout (e.g. OutfitPost, OutfitRating, StyleCritique, OccasionTag).
+6. Output ONLY the polished, structured project description text without conversational filler.`;
+
+    const userPrompt = `User's Input Description:
+"""
+${baseText}
+"""
+
+Target Architectural Parameters:
+- Project Title: "${title}"
+- Platform: ${platform}
+- Frontend: ${frontend} (${ui})
+- Backend: ${backend}
+- Persistence & Storage: ${db}
+- AI Strategy: ${aiModels} (${agentMode})
+
+Please enhance this exact project into a comprehensive, high-context specification.`;
+
+    // 1. Try Gemini with GoogleGenAI SDK
+    const geminiKeysPool: string[] = [
+      process.env.GEMINI_API_KEY,
+      process.env.GEMINI_API2_KEY,
+      process.env.GEMINI_API3_KEY,
+    ].filter(
+      (key): key is string =>
+        typeof key === 'string' &&
+        key.trim().length >= 30 &&
+        !key.startsWith('AQ.') &&
+        key !== 'MY_GEMINI_API_KEY'
+    );
+
+    for (const key of geminiKeysPool) {
+      try {
+        const ai = new GoogleGenAI({ apiKey: key });
+        const candidateModels = ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.5-pro'];
+        for (const model of candidateModels) {
+          try {
+            const resp = await ai.models.generateContent({
+              model,
+              contents: userPrompt,
+              config: {
+                systemInstruction,
+                temperature: 0.25,
+              },
+            });
+            if (resp?.text && resp.text.trim().length > 100) {
+              console.log(`🪄 [Auto-Improve Prompt] ✅ Successfully generated high-context spec via Gemini (${model})!`);
+              return res.json({ success: true, text: resp.text.trim(), model });
+            }
+          } catch (mErr) {
+            // try next model
+          }
+        }
+      } catch (keyErr) {
+        // try next key
+      }
+    }
+
+    // 2. Try default GoogleGenAI() if process.env.GEMINI_API_KEY is implicitly available
+    try {
+      const ai = new GoogleGenAI();
+      const resp = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: userPrompt,
+        config: {
+          systemInstruction,
+          temperature: 0.25,
+        },
+      });
+      if (resp?.text && resp.text.trim().length > 100) {
+        console.log(`🪄 [Auto-Improve Prompt] ✅ Successfully generated spec via default Gemini environment!`);
+        return res.json({ success: true, text: resp.text.trim(), model: 'gemini-2.5-flash' });
+      }
+    } catch {
+      // continue
+    }
+
+    // 3. Fallback notice
+    return res.status(503).json({
+      error: 'Model unavailable, use smart client-side domain synthesizer',
+    });
+  };
+
+  app.post('/api/improve-prompt', handleImprovePrompt);
+  app.post('/api/generate-step', handleImprovePrompt);
   const MCP_TOOLS = [
     {
       name: 'google_search',

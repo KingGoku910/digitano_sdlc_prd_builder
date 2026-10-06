@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from "react";
-import JSZip from "jszip";
 import {
   FileText,
   Database,
@@ -10,19 +9,15 @@ import {
   Download,
   FolderDown,
   Archive,
-  Sparkles,
   Loader2,
   FileCheck2,
   ExternalLink,
   Layers,
   Rocket,
-  Globe,
   Wand2,
   CheckCircle,
   Search,
-  ShieldCheck,
-  TrendingUp,
-  Award,
+  FileType,
 } from "lucide-react";
 import {
   PromptStrategyType,
@@ -30,6 +25,16 @@ import {
   VIBE_PLATFORMS,
   generateVibePromptsForStrategy,
 } from "../../services/vibeCoderStrategies";
+import {
+  downloadMarkdown,
+  downloadDocx,
+  downloadPdf,
+  createZipBundle,
+  ExportFormat,
+  ExportableFile,
+} from "../../services/documentExporter";
+import { sanitizeAndFormatMarkdown } from "../../services/markdownSanitizer";
+import { ProjectSpecificationInputs } from "../../types/projectSpec";
 
 export interface VibePromptItem {
   id: string;
@@ -39,10 +44,12 @@ export interface VibePromptItem {
 }
 
 export interface ArtifactData {
+  research_report?: string;
   prd_document: string;
   database_schema: string;
   api_contracts: string;
   vibe_coder_prompts: VibePromptItem[];
+  // Backwards compatibility mappings
   research_dossier?: string;
   security_spec?: string;
   telemetry_spec?: string;
@@ -53,41 +60,42 @@ interface ArtifactViewerProps {
   artifacts: ArtifactData;
   projectTitle?: string;
   userPrompt?: string;
+  specInputs?: ProjectSpecificationInputs;
 }
 
-interface ArtifactFile {
-  filename: string;
-  title: string;
-  content: string;
-  type: string;
-}
+type CanonicalTab = "research" | "prd" | "database" | "api" | "vibe";
 
 export function ArtifactViewer({
   artifacts,
   projectTitle = "Project Artifacts",
   userPrompt = "",
+  specInputs,
 }: ArtifactViewerProps) {
-  const [activeTab, setActiveTab] = useState<
-    "prd" | "research" | "database" | "api" | "risks" | "metrics" | "audit" | "vibe"
-  >("prd");
+  const [activeTab, setActiveTab] = useState<CanonicalTab>("prd");
+  const [selectedFormat, setSelectedFormat] = useState<ExportFormat>("md");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  // Download states
+  const [isDownloadingSingle, setIsDownloadingSingle] = useState(false);
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
   const [downloadSuccessAll, setDownloadSuccessAll] = useState(false);
   const [isZipping, setIsZipping] = useState(false);
   const [zipSuccess, setZipSuccess] = useState(false);
 
-  // Vibe Coder Prompt Strategy State (13 strategies to choose from)
+  // Vibe Coder Prompt Strategy & Target Platform State
   const [selectedStrategy, setSelectedStrategy] = useState<PromptStrategyType>("oneshot");
+  const [selectedPlatformId, setSelectedPlatformId] = useState<string>("cursor");
   const [selectedPromptIndex, setSelectedPromptIndex] = useState<number>(0);
   const [platformLaunchNotice, setPlatformLaunchNotice] = useState<string | null>(null);
 
   const safeTitle = projectTitle.toLowerCase().replace(/[^a-z0-9]/g, "_") || "project";
 
-  // Derive active prompts based on chosen strategy
+  const activePlatform = useMemo(() => {
+    return VIBE_PLATFORMS.find((p) => p.id === selectedPlatformId) || VIBE_PLATFORMS[0];
+  }, [selectedPlatformId]);
+
+  // Derive active prompts based on chosen strategy and platform
   const activeVibePrompts = useMemo(() => {
-    if (selectedStrategy === "oneshot" && artifacts.vibe_coder_prompts && artifacts.vibe_coder_prompts.length > 0) {
-      return artifacts.vibe_coder_prompts;
-    }
     return generateVibePromptsForStrategy(
       selectedStrategy,
       projectTitle,
@@ -114,62 +122,87 @@ export function ArtifactViewer({
     return cats;
   }, []);
 
-  const getFiles = (): ArtifactFile[] => {
-    const vibeContent = activeVibePrompts
-      .map((p) => `### ${p.title} (${p.target})\n\n${p.content}\n`)
-      .join("\n---\n\n");
+  // Consolidate research text
+  const researchText = useMemo(() => {
+    return sanitizeAndFormatMarkdown(
+      artifacts.research_report ||
+      artifacts.research_dossier ||
+      `# Market & Technical Research Dossier\n\nVerified via GoogleSearchTool & MCP Ground Truth.`
+    );
+  }, [artifacts]);
 
+  // Consolidate PRD text
+  const prdText = useMemo(() => {
+    return sanitizeAndFormatMarkdown(artifacts.prd_document);
+  }, [artifacts]);
+
+  // Consolidate SQL & Models text
+  const sqlText = useMemo(() => {
+    return sanitizeAndFormatMarkdown(artifacts.database_schema);
+  }, [artifacts]);
+
+  // Consolidate API Contracts & Code text
+  const apiText = useMemo(() => {
+    return sanitizeAndFormatMarkdown(artifacts.api_contracts);
+  }, [artifacts]);
+
+  // Consolidate Vibe Code Prompts text tailored to strategy AND platform
+  const vibePromptsText = useMemo(() => {
+    const raw = activeVibePrompts
+      .map((p) => `### ${p.title} (${p.target})\n\n${p.content}`)
+      .join("\n\n---\n\n");
+    return sanitizeAndFormatMarkdown(
+      `# Vibe-Coder Prompt Suite (${activeStrategyDef.label} · ${activePlatform.name})\n\n**Strategy:** ${activeStrategyDef.label} [${activeStrategyDef.badge}]\n**Target Coding Platform:** ${activePlatform.name} (${activePlatform.badge})\n**Platform Capability:** ${activePlatform.tagline}\n**Recommended for:** ${activeStrategyDef.recommendedFor}\n\n---\n\n${raw}`
+    );
+  }, [activeVibePrompts, activeStrategyDef, activePlatform]);
+
+  // The 5 Canonical Deliverables
+  const canonicalFiles: ExportableFile[] = useMemo(() => {
     return [
       {
-        filename: `${safeTitle}_01_master_prd.md`,
-        title: "Master Product Requirements Document",
-        content: artifacts.prd_document,
-        type: "text/markdown",
+        filename: `${safeTitle}_01_full_research_report`,
+        title: "1. Full Technical & Market Research Report",
+        content: researchText,
       },
       {
-        filename: `${safeTitle}_02_research_dossier.md`,
-        title: "Market & Technical Research Dossier (MCP Ground Truth)",
-        content: artifacts.research_dossier || "Market & Technical Research Dossier verified via GoogleSearchTool & MCP Ground Truth.",
-        type: "text/markdown",
+        filename: `${safeTitle}_02_full_prd_document`,
+        title: "2. Full Software Requirements Specification (PRD)",
+        content: prdText,
       },
       {
-        filename: `${safeTitle}_03_database_schema.md`,
-        title: "Database Schema & PostgreSQL DDL",
-        content: artifacts.database_schema,
-        type: "text/markdown",
+        filename: `${safeTitle}_03_sql_schemas_and_models`,
+        title: "3. Full SQL Schemas, Models & Persistence Specification",
+        content: sqlText,
       },
       {
-        filename: `${safeTitle}_04_api_contracts.md`,
-        title: "API Endpoint Contracts & UX 4-State Matrix",
-        content: artifacts.api_contracts,
-        type: "text/markdown",
+        filename: `${safeTitle}_04_api_contracts_and_code`,
+        title: "4. Full API Contracts, Usage Structure & Code Snippets",
+        content: apiText,
       },
       {
-        filename: `${safeTitle}_05_zero_trust_security.md`,
-        title: "Zero-Trust Security & Regulatory Compliance",
-        content: artifacts.security_spec || "Zero-Trust Security, AES-256-GCM, and GDPR/HIPAA compliance boundaries verified.",
-        type: "text/markdown",
-      },
-      {
-        filename: `${safeTitle}_06_telemetry_kpis.md`,
-        title: "Telemetry KPIs & Release Roadmap",
-        content: artifacts.telemetry_spec || "Telemetry KPIs & Phased Release Roadmap defined.",
-        type: "text/markdown",
-      },
-      {
-        filename: `${safeTitle}_07_quality_gate_audit.md`,
-        title: "Orchestrator Quality Gate Audit Certificate",
-        content: artifacts.orchestrator_report || "Master PRD Quality Gate Report: 0 banned tokens found, 100% Gherkin compliant.",
-        type: "text/markdown",
-      },
-      {
-        filename: `${safeTitle}_08_vibe_coder_prompts_${selectedStrategy}.md`,
-        title: `Vibe-Coder Prompts (${activeStrategyDef.label})`,
-        content: vibeContent,
-        type: "text/markdown",
+        filename: `${safeTitle}_05_vibe_code_prompts_${selectedPlatformId}_${selectedStrategy}`,
+        title: `5. Full Vibe Code Prompts (${activeStrategyDef.label} · ${activePlatform.name})`,
+        content: vibePromptsText,
       },
     ];
-  };
+  }, [safeTitle, researchText, prdText, sqlText, apiText, vibePromptsText, selectedPlatformId, selectedStrategy, activeStrategyDef, activePlatform]);
+
+  // Find active file
+  const activeFile = useMemo(() => {
+    switch (activeTab) {
+      case "research":
+        return canonicalFiles[0];
+      case "prd":
+        return canonicalFiles[1];
+      case "database":
+        return canonicalFiles[2];
+      case "api":
+        return canonicalFiles[3];
+      case "vibe":
+      default:
+        return canonicalFiles[4];
+    }
+  }, [activeTab, canonicalFiles]);
 
   const handleCopy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -183,101 +216,75 @@ export function ArtifactViewer({
     setTimeout(() => setPlatformLaunchNotice(null), 4000);
   };
 
-  // Download single active file
-  const handleDownloadCurrent = () => {
-    let content = "";
-    let fileSuffix: string = activeTab;
-
-    if (activeTab === "prd") {
-      content = artifacts.prd_document;
-      fileSuffix = "01_prd";
-    } else if (activeTab === "database") {
-      content = artifacts.database_schema;
-      fileSuffix = "02_database_schema";
-    } else if (activeTab === "api") {
-      content = artifacts.api_contracts;
-      fileSuffix = "03_api_contracts";
-    } else {
-      content = activeVibePrompts
-        .map((p) => `### ${p.title} (${p.target})\n\n${p.content}\n`)
-        .join("\n---\n\n");
-      fileSuffix = `04_vibe_prompts_${selectedStrategy}`;
-    }
-
-    const blob = new Blob([content], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${safeTitle}_${fileSuffix}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  // Download all 4 files simultaneously
-  const handleDownloadAllSimultaneously = () => {
-    setIsDownloadingAll(true);
-    const files = getFiles();
-
-    files.forEach((file, index) => {
-      setTimeout(() => {
-        const blob = new Blob([file.content], { type: file.type });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = file.filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-
-        if (index === files.length - 1) {
-          setIsDownloadingAll(false);
-          setDownloadSuccessAll(true);
-          setTimeout(() => setDownloadSuccessAll(false), 3000);
-        }
-      }, index * 220);
-    });
-  };
-
-  // Download all 8 files bundled as a single .ZIP archive
-  const handleDownloadZipBundle = async () => {
+  // Download Single Active File
+  const handleDownloadActiveFile = async (formatOverride?: ExportFormat) => {
+    const fmt = formatOverride || selectedFormat;
+    setIsDownloadingSingle(true);
     try {
-      setIsZipping(true);
-      const zip = new JSZip();
-      const files = getFiles();
+      if (fmt === "md") {
+        downloadMarkdown(activeFile.filename, activeFile.content);
+      } else if (fmt === "docx") {
+        await downloadDocx(activeFile.filename, activeFile.title, activeFile.content);
+      } else if (fmt === "pdf") {
+        await downloadPdf(activeFile.filename, activeFile.title, activeFile.content);
+      }
+    } catch (err) {
+      console.error("Download error:", err);
+    } finally {
+      setIsDownloadingSingle(false);
+    }
+  };
 
-      files.forEach((f) => {
-        zip.file(f.filename, f.content);
-      });
+  // Download All 5 Files
+  const handleDownloadAllSimultaneously = async () => {
+    setIsDownloadingAll(true);
+    try {
+      for (let i = 0; i < canonicalFiles.length; i++) {
+        const file = canonicalFiles[i];
+        if (selectedFormat === "md") {
+          downloadMarkdown(file.filename, file.content);
+        } else if (selectedFormat === "docx") {
+          await downloadDocx(file.filename, file.title, file.content);
+        } else if (selectedFormat === "pdf") {
+          await downloadPdf(file.filename, file.title, file.content);
+        }
+        await new Promise((r) => setTimeout(r, 250));
+      }
+      setDownloadSuccessAll(true);
+      setTimeout(() => setDownloadSuccessAll(false), 3000);
+    } catch (err) {
+      console.error("Download all error:", err);
+    } finally {
+      setIsDownloadingAll(false);
+    }
+  };
 
-      const indexSummary = `# ${projectTitle} - Autonomous SDLC Specification Package\n\nGenerated by Google ADK + AWS Bedrock 8-Agent Production Pipeline.\n\nStrategy: ${activeStrategyDef.label} (${activeStrategyDef.badge})\n\n## Included Artifacts:\n1. \`${safeTitle}_01_master_prd.md\` - Master Product Requirements Document\n2. \`${safeTitle}_02_research_dossier.md\` - Market & Technical Research Dossier (MCP Ground Truth)\n3. \`${safeTitle}_03_database_schema.md\` - PostgreSQL DDL Schema & Entity Models\n4. \`${safeTitle}_04_api_contracts.md\` - REST API Contracts & 4-State Matrix\n5. \`${safeTitle}_05_zero_trust_security.md\` - Zero-Trust Security, AES-256-GCM & GDPR\n6. \`${safeTitle}_06_telemetry_kpis.md\` - Telemetry KPIs & Phased Release Roadmap\n7. \`${safeTitle}_07_quality_gate_audit.md\` - Orchestrator Quality Gate Audit Certificate\n8. \`${safeTitle}_08_vibe_coder_prompts_${selectedStrategy}.md\` - Modular Vibe-Coder Prompts\n\nGenerated on: ${new Date().toISOString()}`;
-      zip.file("README.md", indexSummary);
-
-      const zipBlob = await zip.generateAsync({ type: "blob" });
+  // Download All as ZIP Archive
+  const handleDownloadZipBundle = async () => {
+    setIsZipping(true);
+    try {
+      const zipBlob = await createZipBundle(canonicalFiles, selectedFormat);
       const url = URL.createObjectURL(zipBlob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${safeTitle}_all_8_artifacts.zip`;
+      a.download = `${safeTitle}_5_deliverables_${selectedFormat}.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
 
       setZipSuccess(true);
       setTimeout(() => setZipSuccess(false), 3000);
     } catch (err) {
-      console.error("Failed to generate ZIP archive:", err);
+      console.error("ZIP Generation error:", err);
     } finally {
       setIsZipping(false);
     }
   };
 
-  // The active prompt targeted for online vibe coding tools
+  // Active targeted prompt text for online platform launcher
   const currentTargetPromptText = useMemo(() => {
     if (selectedPromptIndex === -1) {
-      // Consolidated
       return activeVibePrompts
         .map((p) => `### ${p.title} (${p.target})\n\n${p.content}`)
         .join("\n\n---\n\n");
@@ -287,54 +294,243 @@ export function ArtifactViewer({
 
   return (
     <div className="space-y-4">
-      {/* Header & Main Download Action Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-[#131924] border border-[#1E293B]">
+      {/* 1. TOP STRATEGY & VIBE PLATFORM SELECTION AREA (Requested at top of result area) */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#0F141F] via-[#131924] to-[#0F141F] border border-purple-500/40 shadow-xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-purple-500/20 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-300 shadow-md shadow-purple-500/10">
+              <Wand2 className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white tracking-tight flex flex-wrap items-center gap-2">
+                <span>Prompt Strategy &amp; Vibe Platform Configuration</span>
+                <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-mono border border-purple-500/30">
+                  Top Result Controls
+                </span>
+              </h3>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Configure prompt engineering strategy and target platform. Deliverable #5 and downloads immediately re-target.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <span className="px-2.5 py-1 rounded-xl bg-[#0B0F17] border border-[#1E293B] text-[11px] font-mono text-purple-300">
+              {STRATEGY_DEFINITIONS.length} Strategies · {VIBE_PLATFORMS.length} Platforms
+            </span>
+          </div>
+        </div>
+
+        {/* 2-Column Selectors: Strategy & Platform */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          {/* Column 1: Prompt Engineering Strategy */}
+          <div className="p-3.5 rounded-xl bg-[#0B0F17]/80 border border-purple-900/50 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-purple-300 flex items-center gap-1.5 font-mono">
+                <Layers className="w-3.5 h-3.5 text-purple-400" />
+                <span>1. Prompt Strategy</span>
+              </label>
+              <span className="px-2 py-0.5 rounded bg-purple-950/80 text-[10px] font-mono text-purple-300 border border-purple-800/50">
+                {activeStrategyDef.badge}
+              </span>
+            </div>
+
+            <select
+              value={selectedStrategy}
+              onChange={(e) => setSelectedStrategy(e.target.value as PromptStrategyType)}
+              className="w-full px-3.5 py-2 rounded-xl bg-[#131924] border border-purple-500/40 text-xs font-semibold text-white focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all cursor-pointer shadow-inner"
+            >
+              {Object.entries(strategyCategories).map(([category, items]) => (
+                <optgroup
+                  key={category}
+                  label={`── ${category.toUpperCase()} ──`}
+                  className="bg-[#131924] text-purple-300 font-bold"
+                >
+                  {items.map((strategy) => (
+                    <option
+                      key={strategy.id}
+                      value={strategy.id}
+                      className="bg-[#0B0F17] text-slate-200 font-normal py-1"
+                    >
+                      {strategy.label} [{strategy.badge}]
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+
+            <div className="text-[11px] text-slate-400 leading-relaxed">
+              <span className="text-slate-300 font-medium">{activeStrategyDef.description}</span>
+              <div className="text-[10px] text-purple-300 font-mono mt-1">
+                Best for: {activeStrategyDef.recommendedFor}
+              </div>
+            </div>
+          </div>
+
+          {/* Column 2: Target Coding Platform */}
+          <div className="p-3.5 rounded-xl bg-[#0B0F17]/80 border border-cyan-900/50 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-cyan-300 flex items-center gap-1.5 font-mono">
+                <Rocket className="w-3.5 h-3.5 text-cyan-400" />
+                <span>2. Target Coding Platform</span>
+              </label>
+              <span className="px-2 py-0.5 rounded bg-cyan-950/80 text-[10px] font-mono text-cyan-300 border border-cyan-800/50">
+                {activePlatform.badge}
+              </span>
+            </div>
+
+            <select
+              value={selectedPlatformId}
+              onChange={(e) => setSelectedPlatformId(e.target.value)}
+              className="w-full px-3.5 py-2 rounded-xl bg-[#131924] border border-cyan-500/40 text-xs font-semibold text-white focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all cursor-pointer shadow-inner"
+            >
+              {VIBE_PLATFORMS.map((platform) => (
+                <option
+                  key={platform.id}
+                  value={platform.id}
+                  className="bg-[#0B0F17] text-slate-200 font-normal py-1"
+                >
+                  {platform.name} ({platform.badge})
+                </option>
+              ))}
+            </select>
+
+            <div className="text-[11px] text-slate-400 leading-relaxed">
+              <span className="text-slate-300 font-medium">{activePlatform.tagline}</span>
+              <div className="text-[10px] text-cyan-300 font-mono mt-1">
+                Optimized for: {activePlatform.popularWith}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Selected Summary Banner */}
+        <div className="pt-2.5 border-t border-[#1E293B] flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-400 gap-2">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-[11px] text-slate-300 font-mono">
+              Deliverable #5 Active Target: <strong className="text-purple-300">{activeStrategyDef.label}</strong> configured for <strong className="text-cyan-300">{activePlatform.name}</strong>
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleLaunchPlatform(activePlatform.name, currentTargetPromptText)}
+              className="px-2.5 py-1 rounded-lg bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-700/50 text-[11px] font-mono text-cyan-300 transition-colors cursor-pointer flex items-center gap-1.5"
+            >
+              <Copy className="w-3 h-3 text-cyan-400" />
+              <span>Copy Platform Prompt</span>
+            </button>
+            {platformLaunchNotice && (
+              <span className="text-[10px] font-mono text-emerald-400 animate-in fade-in">
+                {platformLaunchNotice}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 2. MAIN HEADER & MULTI-FORMAT DOWNLOAD ACTION BAR */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 rounded-2xl bg-[#131924] border border-[#1E293B]">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-xl font-bold text-white tracking-tight">
-              Generated Artifacts
+            <h2 className="text-lg font-bold text-white tracking-tight">
+              Production SDLC Deliverables
             </h2>
-            <span className="px-2 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-800/40 text-[11px] font-mono text-cyan-300">
-              8 Deliverables Ready
+            <span className="px-2.5 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-800/40 text-[11px] font-mono text-cyan-300 font-semibold">
+              5 Canonical Deliverables
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Download each file individually, export all 8 simultaneously, or package into a ZIP.
+            Verified, high-value specification package available for direct download in Markdown, Word (.docx), or PDF.
           </p>
         </div>
 
-        {/* Global Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Download All 8 Files Simultaneously */}
+        {/* Format Selector & Global Download Buttons */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Format Selector */}
+          <div className="flex items-center p-1 rounded-xl bg-[#0B0F17] border border-[#1E293B]">
+            <span className="text-[10px] font-mono text-slate-400 px-2 flex items-center gap-1">
+              <FileType className="w-3 h-3 text-cyan-400" />
+              <span>Format:</span>
+            </span>
+            <button
+              onClick={() => setSelectedFormat("md")}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                selectedFormat === "md"
+                  ? "bg-cyan-500/25 text-cyan-300 border border-cyan-500/50 shadow-sm"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              .MD
+            </button>
+            <button
+              onClick={() => setSelectedFormat("docx")}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                selectedFormat === "docx"
+                  ? "bg-blue-600/30 text-blue-300 border border-blue-500/50 shadow-sm"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              .DOCX
+            </button>
+            <button
+              onClick={() => setSelectedFormat("pdf")}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                selectedFormat === "pdf"
+                  ? "bg-rose-500/25 text-rose-300 border border-rose-500/50 shadow-sm"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              .PDF
+            </button>
+          </div>
+
+          {/* Download Active File */}
+          <button
+            onClick={() => handleDownloadActiveFile()}
+            disabled={isDownloadingSingle}
+            title={`Download active tab as .${selectedFormat}`}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1E293B] hover:bg-[#334155] border border-[#334155] text-xs font-medium text-slate-200 transition-colors cursor-pointer disabled:opacity-50"
+          >
+            {isDownloadingSingle ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+            ) : (
+              <Download className="w-3.5 h-3.5 text-cyan-400" />
+            )}
+            <span>Export Active (.{selectedFormat.toUpperCase()})</span>
+          </button>
+
+          {/* Download All (5 Files) */}
           <button
             onClick={handleDownloadAllSimultaneously}
             disabled={isDownloadingAll}
-            title="Download all 8 markdown files to your device simultaneously"
+            title={`Download all 5 files sequentially in .${selectedFormat} format`}
             className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#06B6D4] to-[#3B82F6] hover:opacity-95 text-xs font-semibold text-white shadow-md shadow-cyan-500/20 transition-all cursor-pointer disabled:opacity-50"
           >
             {isDownloadingAll ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>Downloading 8 Files...</span>
+                <span>Downloading 5 Files...</span>
               </>
             ) : downloadSuccessAll ? (
               <>
                 <FileCheck2 className="w-3.5 h-3.5 text-emerald-300" />
-                <span>All 8 Downloaded!</span>
+                <span>All 5 Downloaded!</span>
               </>
             ) : (
               <>
                 <FolderDown className="w-3.5 h-3.5" />
-                <span>Download All (8 Files)</span>
+                <span>Download All (5 Files)</span>
               </>
             )}
           </button>
 
-          {/* Download All as ZIP */}
+          {/* Download ZIP Package */}
           <button
             onClick={handleDownloadZipBundle}
             disabled={isZipping}
-            title="Package all 8 artifacts into a single .zip archive"
+            title="Package all 5 deliverables into a single compressed .zip file"
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#0B0F17] hover:bg-[#1E293B] border border-cyan-800/40 text-xs font-medium text-cyan-300 transition-colors cursor-pointer disabled:opacity-50"
           >
             {isZipping ? (
@@ -350,150 +546,94 @@ export function ArtifactViewer({
             ) : (
               <>
                 <Archive className="w-3.5 h-3.5 text-cyan-400" />
-                <span>ZIP Bundle (8)</span>
+                <span>ZIP Package (5)</span>
               </>
             )}
-          </button>
-
-          {/* Download Active Single File */}
-          <button
-            onClick={handleDownloadCurrent}
-            title="Download active tab file (.md)"
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1E293B] hover:bg-[#334155] border border-[#334155]/60 text-xs font-medium text-slate-300 transition-colors cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5 text-slate-400" />
-            <span className="hidden md:inline">Download Active</span>
-            <span className="md:hidden">Tab .md</span>
           </button>
         </div>
       </div>
 
-      {/* Tabs Bar */}
+      {/* 3. CANONICAL TABS (5 DELIVERABLES) */}
       <div className="flex flex-wrap items-center gap-1.5 p-1.5 bg-[#0B0F17] rounded-2xl border border-[#1E293B]">
         <button
-          onClick={() => setActiveTab("prd")}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
-            activeTab === "prd"
-              ? "bg-[#06B6D4]/15 text-cyan-300 border border-[#06B6D4]/40 shadow-sm"
-              : "text-slate-400 hover:text-white hover:bg-[#131924]"
-          }`}
-        >
-          <FileText className="w-3.5 h-3.5 text-cyan-400" />
-          <span>1. Master PRD</span>
-        </button>
-
-        <button
           onClick={() => setActiveTab("research")}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
             activeTab === "research"
               ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm"
               : "text-slate-400 hover:text-white hover:bg-[#131924]"
           }`}
         >
-          <Search className="w-3.5 h-3.5 text-cyan-400" />
-          <span>2. Research Dossier (MCP)</span>
+          <Search className="w-4 h-4 text-cyan-400" />
+          <span>1. Full Research Report</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("prd")}
+          className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+            activeTab === "prd"
+              ? "bg-[#06B6D4]/20 text-cyan-300 border border-[#06B6D4]/50 shadow-sm"
+              : "text-slate-400 hover:text-white hover:bg-[#131924]"
+          }`}
+        >
+          <FileText className="w-4 h-4 text-cyan-400" />
+          <span>2. Full PRD Document</span>
         </button>
 
         <button
           onClick={() => setActiveTab("database")}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
             activeTab === "database"
-              ? "bg-[#06B6D4]/15 text-cyan-300 border border-[#06B6D4]/40 shadow-sm"
+              ? "bg-[#06B6D4]/20 text-cyan-300 border border-[#06B6D4]/50 shadow-sm"
               : "text-slate-400 hover:text-white hover:bg-[#131924]"
           }`}
         >
-          <Database className="w-3.5 h-3.5 text-cyan-400" />
-          <span>3. Database DDL</span>
+          <Database className="w-4 h-4 text-cyan-400" />
+          <span>3. SQL Schemas &amp; Models</span>
         </button>
 
         <button
           onClick={() => setActiveTab("api")}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
             activeTab === "api"
-              ? "bg-[#06B6D4]/15 text-cyan-300 border border-[#06B6D4]/40 shadow-sm"
+              ? "bg-[#06B6D4]/20 text-cyan-300 border border-[#06B6D4]/50 shadow-sm"
               : "text-slate-400 hover:text-white hover:bg-[#131924]"
           }`}
         >
-          <Terminal className="w-3.5 h-3.5 text-cyan-400" />
-          <span>4. API Contracts</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab("risks")}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
-            activeTab === "risks"
-              ? "bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm"
-              : "text-slate-400 hover:text-white hover:bg-[#131924]"
-          }`}
-        >
-          <ShieldCheck className="w-3.5 h-3.5 text-rose-400" />
-          <span>5. Security &amp; Risks</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab("metrics")}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
-            activeTab === "metrics"
-              ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm"
-              : "text-slate-400 hover:text-white hover:bg-[#131924]"
-          }`}
-        >
-          <TrendingUp className="w-3.5 h-3.5 text-amber-400" />
-          <span>6. KPIs &amp; Milestones</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab("audit")}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
-            activeTab === "audit"
-              ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 shadow-sm"
-              : "text-slate-400 hover:text-white hover:bg-[#131924]"
-          }`}
-        >
-          <Award className="w-3.5 h-3.5 text-indigo-400" />
-          <span>7. Quality Gate Audit</span>
+          <Terminal className="w-4 h-4 text-cyan-400" />
+          <span>4. API Contracts &amp; Code</span>
         </button>
 
         <button
           onClick={() => setActiveTab("vibe")}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
             activeTab === "vibe"
-              ? "bg-purple-500/20 text-purple-200 border border-purple-500/40 shadow-sm"
+              ? "bg-purple-500/25 text-purple-200 border border-purple-500/50 shadow-sm"
               : "text-slate-400 hover:text-white hover:bg-[#131924]"
           }`}
         >
-          <Code2 className="w-3.5 h-3.5 text-purple-400" />
-          <span className="font-semibold text-purple-300">8. Vibe-Coder Prompts</span>
+          <Code2 className="w-4 h-4 text-purple-400" />
+          <span className="font-semibold text-purple-300">5. Vibe-Coder Prompts</span>
           <span className="px-1.5 py-0.2 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-mono border border-purple-500/30">
-            {STRATEGY_DEFINITIONS.length}
+            {activeVibePrompts.length}
           </span>
         </button>
       </div>
 
-      {/* Tab Contents */}
+      {/* 4. TAB CONTENTS & DIRECT EXPORT CONTROLS */}
       <div className="rounded-2xl bg-[#131924] border border-[#1E293B] p-6 relative overflow-hidden shadow-xl">
-        {/* Quick Copy Whole Tab Content Button */}
-        {activeTab !== "vibe" && (
-          <div className="absolute top-4 right-4 z-10">
+        {/* Top Floating Action Bar inside Tab Content */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 mb-4 border-b border-[#1E293B]">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono font-semibold text-cyan-300">
+              {activeFile.title}
+            </span>
+          </div>
+
+          {/* Quick Actions: Copy, .MD, .DOCX, .PDF */}
+          <div className="flex items-center gap-1.5">
             <button
-              onClick={() => {
-                const text =
-                  activeTab === "prd"
-                    ? artifacts.prd_document
-                    : activeTab === "research"
-                    ? artifacts.research_dossier || ""
-                    : activeTab === "database"
-                    ? artifacts.database_schema
-                    : activeTab === "api"
-                    ? artifacts.api_contracts
-                    : activeTab === "risks"
-                    ? artifacts.security_spec || ""
-                    : activeTab === "metrics"
-                    ? artifacts.telemetry_spec || ""
-                    : artifacts.orchestrator_report || "";
-                handleCopy(text, `tab_${activeTab}`);
-              }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0B0F17] hover:bg-[#1E293B] border border-[#1E293B] text-xs font-medium text-slate-300 transition-colors cursor-pointer"
+              onClick={() => handleCopy(activeFile.content, `tab_${activeTab}`)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#0B0F17] hover:bg-[#1E293B] border border-[#1E293B] text-xs font-medium text-slate-300 transition-colors cursor-pointer"
             >
               {copiedKey === `tab_${activeTab}` ? (
                 <>
@@ -507,120 +647,120 @@ export function ArtifactViewer({
                 </>
               )}
             </button>
-          </div>
-        )}
 
-        {/* PRD View */}
-        {activeTab === "prd" && (
-          <div className="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed font-sans">
-            <pre className="whitespace-pre-wrap font-sans bg-transparent p-0 border-0 text-slate-300 leading-relaxed">
-              {artifacts.prd_document}
-            </pre>
-          </div>
-        )}
+            <button
+              onClick={() => downloadMarkdown(activeFile.filename, activeFile.content)}
+              title="Download as Markdown file (.md)"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#0B0F17] hover:bg-cyan-950/60 border border-cyan-900/40 text-xs font-mono text-cyan-300 transition-colors cursor-pointer"
+            >
+              <Download className="w-3 h-3" />
+              <span>.md</span>
+            </button>
 
-        {/* Research Dossier View (MCP GoogleSearchTool Ground Truth) */}
+            <button
+              onClick={() => downloadDocx(activeFile.filename, activeFile.title, activeFile.content)}
+              title="Download as Microsoft Word document (.docx)"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#0B0F17] hover:bg-blue-950/60 border border-blue-900/40 text-xs font-mono text-blue-300 transition-colors cursor-pointer"
+            >
+              <Download className="w-3 h-3" />
+              <span>.docx</span>
+            </button>
+
+            <button
+              onClick={() => downloadPdf(activeFile.filename, activeFile.title, activeFile.content)}
+              title="Download as Adobe PDF document (.pdf)"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#0B0F17] hover:bg-rose-950/60 border border-rose-900/40 text-xs font-mono text-rose-300 transition-colors cursor-pointer"
+            >
+              <Download className="w-3 h-3" />
+              <span>.pdf</span>
+            </button>
+          </div>
+        </div>
+
+        {/* TAB 1: FULL RESEARCH REPORT */}
         {activeTab === "research" && (
           <div className="space-y-4">
-            <div className="p-3.5 rounded-xl bg-cyan-950/40 border border-cyan-800/60 flex items-center justify-between">
+            <div className="p-3.5 rounded-xl bg-cyan-950/40 border border-cyan-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Search className="w-4 h-4 text-cyan-400" />
                 <span className="text-xs font-mono text-cyan-300 font-semibold">
-                  Technical Researcher Context Dossier (Google ADK MCP Tool)
+                  Technical Researcher Dossier for Each Agent Role (GoogleSearchTool &amp; MCP Ground Truth)
                 </span>
               </div>
               <span className="px-2 py-0.5 rounded bg-cyan-900/60 border border-cyan-700/60 text-[10px] font-mono text-cyan-200">
-                GoogleSearchTool(bypass_multi_tools_limit=True)
+                All 6 Specialized Roles Covered
               </span>
             </div>
             <pre className="whitespace-pre-wrap font-sans bg-[#0B0F17] p-5 rounded-xl border border-[#1E293B] text-slate-200 text-sm leading-relaxed overflow-x-auto">
-              {artifacts.research_dossier || "Market & Technical Research Dossier verified via GoogleSearchTool & MCP Ground Truth."}
+              {researchText}
             </pre>
           </div>
         )}
 
-        {/* Database Schema View */}
+        {/* TAB 2: FULL PRD DOCUMENT */}
+        {activeTab === "prd" && (
+          <div className="space-y-4">
+            <div className="p-3.5 rounded-xl bg-[#0B0F17] border border-cyan-800/40 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-cyan-400" />
+                <span className="text-xs font-mono text-cyan-300 font-semibold">
+                  Master Software Requirements Specification (PRD) Suite
+                </span>
+              </div>
+              <span className="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800/40 text-[10px] font-mono text-emerald-300">
+                100% Gherkin • Zero Banned Tokens
+              </span>
+            </div>
+            <pre className="whitespace-pre-wrap font-sans bg-[#0B0F17] p-5 rounded-xl border border-[#1E293B] text-slate-200 text-sm leading-relaxed overflow-x-auto">
+              {prdText}
+            </pre>
+          </div>
+        )}
+
+        {/* TAB 3: SQL SCHEMAS & MODELS */}
         {activeTab === "database" && (
-          <div className="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed font-mono">
-            <pre className="whitespace-pre-wrap font-mono bg-[#0B0F17] p-4 rounded-xl border border-[#1E293B] text-cyan-300/90 text-xs leading-relaxed overflow-x-auto">
-              {artifacts.database_schema}
+          <div className="space-y-4">
+            <div className="p-3.5 rounded-xl bg-cyan-950/40 border border-cyan-800/60 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Database className="w-4 h-4 text-cyan-400" />
+                <span className="text-xs font-mono text-cyan-300 font-semibold">
+                  PostgreSQL 16 Production DDL, Single-Table DynamoDB Schema &amp; Seed Data
+                </span>
+              </div>
+              <span className="px-2 py-0.5 rounded bg-cyan-900/60 border border-cyan-700/60 text-[10px] font-mono text-cyan-200">
+                Normalized 3NF + Single-Table
+              </span>
+            </div>
+            <pre className="whitespace-pre-wrap font-mono bg-[#0B0F17] p-5 rounded-xl border border-[#1E293B] text-cyan-300/90 text-xs leading-relaxed overflow-x-auto">
+              {sqlText}
             </pre>
           </div>
         )}
 
-        {/* API Contracts View */}
+        {/* TAB 4: API CONTRACTS & CODE */}
         {activeTab === "api" && (
-          <div className="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed font-mono">
-            <pre className="whitespace-pre-wrap font-mono bg-[#0B0F17] p-4 rounded-xl border border-[#1E293B] text-slate-200 text-xs leading-relaxed overflow-x-auto">
-              {artifacts.api_contracts}
-            </pre>
-          </div>
-        )}
-
-        {/* Zero-Trust Security & Risks View */}
-        {activeTab === "risks" && (
           <div className="space-y-4">
-            <div className="p-3.5 rounded-xl bg-rose-950/40 border border-rose-800/60 flex items-center justify-between">
+            <div className="p-3.5 rounded-xl bg-[#0B0F17] border border-cyan-800/40 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-rose-400" />
-                <span className="text-xs font-mono text-rose-300 font-semibold">
-                  Zero-Trust Security, AES-256-GCM &amp; Regulatory Compliance
+                <Terminal className="w-4 h-4 text-cyan-400" />
+                <span className="text-xs font-mono text-cyan-300 font-semibold">
+                  OpenAPI 3.1 RESTful Routes, 4-State UI Matrix &amp; Working Code Snippets
                 </span>
               </div>
-              <span className="px-2 py-0.5 rounded bg-rose-900/60 border border-rose-700/60 text-[10px] font-mono text-rose-200">
-                Agent 5 Risk &amp; Compliance Officer
+              <span className="px-2 py-0.5 rounded bg-cyan-900/60 border border-cyan-700/60 text-[10px] font-mono text-cyan-200">
+                cURL • TypeScript • Python
               </span>
             </div>
-            <pre className="whitespace-pre-wrap font-sans bg-[#0B0F17] p-5 rounded-xl border border-[#1E293B] text-slate-200 text-sm leading-relaxed overflow-x-auto">
-              {artifacts.security_spec || "Zero-Trust Security boundary and GDPR/HIPAA compliance policies active."}
+            <pre className="whitespace-pre-wrap font-mono bg-[#0B0F17] p-5 rounded-xl border border-[#1E293B] text-slate-200 text-xs leading-relaxed overflow-x-auto">
+              {apiText}
             </pre>
           </div>
         )}
 
-        {/* Telemetry KPIs & Milestones View */}
-        {activeTab === "metrics" && (
-          <div className="space-y-4">
-            <div className="p-3.5 rounded-xl bg-amber-950/40 border border-amber-800/60 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-amber-400" />
-                <span className="text-xs font-mono text-amber-300 font-semibold">
-                  Measurable Numerical KPIs &amp; Phased Release Milestones
-                </span>
-              </div>
-              <span className="px-2 py-0.5 rounded bg-amber-900/60 border border-amber-700/60 text-[10px] font-mono text-amber-200">
-                Agent 6 Telemetry Strategist
-              </span>
-            </div>
-            <pre className="whitespace-pre-wrap font-sans bg-[#0B0F17] p-5 rounded-xl border border-[#1E293B] text-slate-200 text-sm leading-relaxed overflow-x-auto">
-              {artifacts.telemetry_spec || "Quantitative SLAs, latency targets, and phased rollout roadmaps defined."}
-            </pre>
-          </div>
-        )}
-
-        {/* Orchestrator Quality Gate Audit View */}
-        {activeTab === "audit" && (
-          <div className="space-y-4">
-            <div className="p-3.5 rounded-xl bg-indigo-950/40 border border-indigo-800/60 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Award className="w-4 h-4 text-indigo-400" />
-                <span className="text-xs font-mono text-indigo-300 font-semibold">
-                  Master Orchestrator Quality Gate Audit Certificate
-                </span>
-              </div>
-              <span className="px-2 py-0.5 rounded bg-indigo-900/60 border border-indigo-700/60 text-[10px] font-mono text-emerald-300">
-                PASSED • Zero Banned Tokens
-              </span>
-            </div>
-            <pre className="whitespace-pre-wrap font-sans bg-[#0B0F17] p-5 rounded-xl border border-[#1E293B] text-emerald-300/90 text-sm leading-relaxed overflow-x-auto">
-              {artifacts.orchestrator_report || "Quality Gate Audit: Zero banned tokens found. 100% Gherkin compliance verified."}
-            </pre>
-          </div>
-        )}
-
-        {/* 4. VIBE-CODER PROMPTS VIEW (With Strategy Dropdown & 5 Online Vibe Coder Launchers) */}
+        {/* TAB 5: VIBE-CODER PROMPTS */}
         {activeTab === "vibe" && (
           <div className="space-y-6">
-            {/* Notification Toast for Launching Online Platform */}
+            {/* Notification Toast for Platform Launch */}
             {platformLaunchNotice && (
               <div className="p-3 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-200 text-xs flex items-center justify-between gap-2 shadow-lg animate-in fade-in">
                 <div className="flex items-center gap-2">
@@ -628,81 +768,12 @@ export function ArtifactViewer({
                   <span className="font-medium">{platformLaunchNotice}</span>
                 </div>
                 <span className="text-[11px] text-emerald-400 font-mono">
-                  Prompt in clipboard &amp; URL query parameters
+                  Prompt copied to clipboard &amp; URL query parameters
                 </span>
               </div>
             )}
 
-            {/* STRATEGY SELECTOR HEADER & DROPDOWN (13 Strategies) */}
-            <div className="p-5 rounded-2xl bg-[#0B0F17] border border-purple-500/30 shadow-lg space-y-4">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Wand2 className="w-4 h-4 text-purple-400" />
-                    <span className="text-xs font-mono uppercase tracking-wider text-purple-300 font-bold">
-                      PROMPT ENGINEERING STRATEGY SELECTOR
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-mono border border-purple-500/30">
-                      {STRATEGY_DEFINITIONS.length} Options Available
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Select a prompting strategy tailored for your target AI model or coding style.
-                  </p>
-                </div>
-
-                {/* Strategy Dropdown */}
-                <div className="relative min-w-[280px]">
-                  <select
-                    value={selectedStrategy}
-                    onChange={(e) => setSelectedStrategy(e.target.value as PromptStrategyType)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-[#131924] border border-purple-500/40 text-xs font-semibold text-white focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all cursor-pointer"
-                  >
-                    {Object.entries(strategyCategories).map(([category, items]) => (
-                      <optgroup
-                        key={category}
-                        label={`── ${category.toUpperCase()} ──`}
-                        className="bg-[#131924] text-purple-300 font-bold"
-                      >
-                        {items.map((strategy) => (
-                          <option
-                            key={strategy.id}
-                            value={strategy.id}
-                            className="bg-[#0B0F17] text-slate-200 font-normal py-1"
-                          >
-                            {strategy.label} [{strategy.badge}]
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Active Strategy Detail Banner */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-[#1E293B]/80 text-xs">
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-white">
-                      {activeStrategyDef.label}
-                    </span>
-                    <span className="px-2 py-0.5 rounded-md bg-purple-950/60 border border-purple-800/40 text-purple-300 font-mono text-[10px]">
-                      {activeStrategyDef.badge}
-                    </span>
-                  </div>
-                  <p className="text-slate-400 text-[11px]">
-                    {activeStrategyDef.description}
-                  </p>
-                </div>
-
-                <div className="text-[11px] font-mono text-cyan-400/90 bg-[#131924] px-3 py-1.5 rounded-lg border border-[#1E293B] shrink-0">
-                  <span className="text-slate-500">Best for: </span>
-                  {activeStrategyDef.recommendedFor}
-                </div>
-              </div>
-            </div>
-
-            {/* ONLINE VIBE CODER PLATFORMS LAUNCHPAD (5 Platforms with URL params) */}
+            {/* ONLINE VIBE CODER PLATFORMS LAUNCHPAD */}
             <div className="p-5 rounded-2xl bg-gradient-to-b from-[#0F141F] to-[#0B0F17] border border-cyan-500/30 shadow-xl space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
@@ -717,7 +788,7 @@ export function ArtifactViewer({
                       </span>
                     </h3>
                     <p className="text-xs text-slate-400">
-                      Click any platform below to launch it in a new tab with your prompt passed via URL parameters.
+                      Click any platform below to launch it in a new tab with your prompt passed via URL query parameters.
                     </p>
                   </div>
                 </div>
@@ -817,11 +888,11 @@ export function ArtifactViewer({
                 <div className="flex items-center gap-2">
                   <Layers className="w-4 h-4 text-cyan-400" />
                   <span className="text-xs font-mono uppercase tracking-wider text-slate-300 font-bold">
-                    GENERATED PROMPT SUITE ({activeVibePrompts.length} PROMPTS)
+                    PROMPT SUITE ({activeVibePrompts.length} MODULAR PROMPTS)
                   </span>
                 </div>
                 <span className="text-xs text-slate-400">
-                  Strategy: <strong className="text-purple-300">{activeStrategyDef.label}</strong>
+                  Active Strategy: <strong className="text-purple-300">{activeStrategyDef.label}</strong>
                 </span>
               </div>
 
@@ -842,13 +913,12 @@ export function ArtifactViewer({
                           </span>
                         </div>
                         <p className="text-[11px] text-slate-400">
-                          Engineered with {activeStrategyDef.label} strategy.
+                          Tailored for {activeStrategyDef.label} strategy.
                         </p>
                       </div>
 
                       {/* Action buttons on card */}
                       <div className="flex flex-wrap items-center gap-2">
-                        {/* 1-Click Launch dropdown / buttons */}
                         <div className="flex items-center gap-1">
                           <a
                             href={`https://lovable.dev/?prompt=${encodeURIComponent(promptItem.content)}`}
@@ -889,16 +959,6 @@ export function ArtifactViewer({
                             title="Launch this prompt directly in Replit Agent"
                           >
                             Replit
-                          </a>
-                          <a
-                            href={`https://www.create.xyz/?prompt=${encodeURIComponent(promptItem.content)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={() => handleLaunchPlatform("Create.xyz", promptItem.content)}
-                            className="px-2 py-1 rounded-lg bg-[#131924] hover:bg-purple-950/60 border border-purple-900/40 text-[10px] font-mono text-purple-300 transition-colors"
-                            title="Launch this prompt directly in Create.xyz"
-                          >
-                            Create
                           </a>
                         </div>
 
