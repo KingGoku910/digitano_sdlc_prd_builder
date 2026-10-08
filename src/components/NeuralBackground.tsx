@@ -43,17 +43,18 @@ export function NeuralBackground() {
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseleave", handleMouseLeave);
 
-    // Vibrant cybernetic color palette
+    // Vibrant cybernetic color palette with intensified luminescent colors
     const colors = [
-      { core: "#E0F2FE", glow: "#06B6D4", rgb: "6, 182, 212" },   // Cyan
-      { core: "#F0F9FF", glow: "#38BDF8", rgb: "56, 189, 248" },  // Sky
-      { core: "#EFF6FF", glow: "#3B82F6", rgb: "59, 130, 246" },  // Electric Blue
-      { core: "#F5F3FF", glow: "#8B5CF6", rgb: "139, 92, 246" },  // Neon Violet
-      { core: "#FAF5FF", glow: "#A855F7", rgb: "168, 85, 247" },  // Electric Purple
+      { core: "#FFFFFF", glow: "#00F0FF", rgb: "0, 240, 255" },   // Electric Neon Cyan
+      { core: "#FFFFFF", glow: "#38BDF8", rgb: "56, 189, 248" },  // Vivid Sky Blue
+      { core: "#FFFFFF", glow: "#60A5FA", rgb: "96, 165, 250" },  // Bright Electric Blue
+      { core: "#FFFFFF", glow: "#A855F7", rgb: "168, 85, 247" },  // Radiant Violet
+      { core: "#FFFFFF", glow: "#C084FC", rgb: "192, 132, 252" },  // Vibrant Purple
+      { core: "#FFFFFF", glow: "#06B6D4", rgb: "6, 182, 212" },   // Hyper Cyan
     ];
 
     // Node count scaled for lush interconnected graph
-    const particleCount = Math.min(Math.floor((width * height) / 11000), 85);
+    const particleCount = Math.min(Math.floor((width * height) / 9500), 95);
 
     interface Particle {
       x: number;
@@ -66,6 +67,7 @@ export function NeuralBackground() {
       pulse: number;
       pulseSpeed: number;
       isHub: boolean;
+      ringAngle: number;
     }
 
     interface SynapsePulse {
@@ -79,19 +81,20 @@ export function NeuralBackground() {
     const particles: Particle[] = [];
 
     for (let i = 0; i < particleCount; i++) {
-      const isHub = Math.random() < 0.18; // 18% of nodes are major hubs
-      const baseRadius = isHub ? Math.random() * 1.5 + 3.2 : Math.random() * 1.4 + 1.8;
+      const isHub = Math.random() < 0.25; // 25% of nodes are major hubs
+      const baseRadius = isHub ? Math.random() * 2.2 + 3.8 : Math.random() * 1.8 + 2.2;
       particles.push({
         x: Math.random() * width,
         y: Math.random() * height,
-        vx: (Math.random() - 0.5) * (isHub ? 0.35 : 0.65),
-        vy: (Math.random() - 0.5) * (isHub ? 0.35 : 0.65),
+        vx: (Math.random() - 0.5) * (isHub ? 0.4 : 0.75),
+        vy: (Math.random() - 0.5) * (isHub ? 0.4 : 0.75),
         radius: baseRadius,
         baseRadius,
         color: colors[Math.floor(Math.random() * colors.length)],
         pulse: Math.random() * Math.PI * 2,
-        pulseSpeed: Math.random() * 0.035 + 0.02,
+        pulseSpeed: Math.random() * 0.045 + 0.025,
         isHub,
+        ringAngle: Math.random() * Math.PI * 2,
       });
     }
 
@@ -99,11 +102,11 @@ export function NeuralBackground() {
     const pulses: SynapsePulse[] = [];
 
     const spawnPulse = () => {
-      if (pulses.length > 12) return;
+      if (pulses.length > 20) return;
       const from = Math.floor(Math.random() * particles.length);
       // Find nearest neighbor
       let nearestIdx = -1;
-      let nearestDist = 180;
+      let nearestDist = 200;
       for (let j = 0; j < particles.length; j++) {
         if (from === j) continue;
         const dx = particles[from].x - particles[j].x;
@@ -119,7 +122,7 @@ export function NeuralBackground() {
           fromIndex: from,
           toIndex: nearestIdx,
           progress: 0,
-          speed: Math.random() * 0.018 + 0.012,
+          speed: Math.random() * 0.025 + 0.015,
           color: particles[from].color.glow,
         });
       }
@@ -135,24 +138,24 @@ export function NeuralBackground() {
       const gradCenter = ctx.createRadialGradient(
         width * 0.5,
         height * 0.25,
-        50,
+        40,
         width * 0.5,
         height * 0.35,
-        Math.max(width, height) * 0.65
+        Math.max(width, height) * 0.7
       );
-      gradCenter.addColorStop(0, "rgba(6, 182, 212, 0.12)");
-      gradCenter.addColorStop(0.35, "rgba(59, 130, 246, 0.06)");
-      gradCenter.addColorStop(0.7, "rgba(139, 92, 246, 0.03)");
+      gradCenter.addColorStop(0, "rgba(6, 182, 212, 0.18)");
+      gradCenter.addColorStop(0.35, "rgba(59, 130, 246, 0.10)");
+      gradCenter.addColorStop(0.7, "rgba(168, 85, 247, 0.05)");
       gradCenter.addColorStop(1, "rgba(11, 15, 23, 0)");
       ctx.fillStyle = gradCenter;
       ctx.fillRect(0, 0, width, height);
 
       // Periodically spawn synaptic pulses
-      if (frameCount % 45 === 0) {
+      if (frameCount % 30 === 0) {
         spawnPulse();
       }
 
-      const maxDistance = 165;
+      const maxDistance = 185;
 
       // 2. Render Neural Axon Connection Lines
       for (let i = 0; i < particles.length; i++) {
@@ -167,7 +170,7 @@ export function NeuralBackground() {
           if (dist < maxDistance) {
             const normalizedDist = 1 - dist / maxDistance;
             // Enhanced luminous alpha (brighter & attention grabbing)
-            const alpha = Math.min(0.65, normalizedDist * 0.52);
+            const alpha = Math.min(0.85, normalizedDist * 0.72);
 
             ctx.beginPath();
             ctx.moveTo(p1.x, p1.y);
@@ -179,7 +182,7 @@ export function NeuralBackground() {
             lineGrad.addColorStop(1, `rgba(${p2.color.rgb}, ${alpha})`);
 
             ctx.strokeStyle = lineGrad;
-            ctx.lineWidth = normalizedDist * 1.4 + 0.6;
+            ctx.lineWidth = normalizedDist * 1.8 + 0.8;
             ctx.stroke();
           }
         }
@@ -191,14 +194,14 @@ export function NeuralBackground() {
           const mDist = Math.sqrt(mdx * mdx + mdy * mdy);
 
           if (mDist < mouse.radius) {
-            const mAlpha = (1 - mDist / mouse.radius) * 0.75;
+            const mAlpha = (1 - mDist / mouse.radius) * 0.95;
             ctx.beginPath();
             ctx.moveTo(p1.x, p1.y);
             ctx.lineTo(mouse.x, mouse.y);
             ctx.strokeStyle = `rgba(56, 189, 248, ${mAlpha})`;
-            ctx.lineWidth = 1.2;
+            ctx.lineWidth = 1.6;
             ctx.shadowColor = "#38BDF8";
-            ctx.shadowBlur = 10;
+            ctx.shadowBlur = 14;
             ctx.stroke();
             ctx.shadowBlur = 0;
           }
@@ -223,10 +226,10 @@ export function NeuralBackground() {
         const pulseY = pFrom.y + (pTo.y - pFrom.y) * pulse.progress;
 
         ctx.beginPath();
-        ctx.arc(pulseX, pulseY, 2.5, 0, Math.PI * 2);
+        ctx.arc(pulseX, pulseY, 3.2, 0, Math.PI * 2);
         ctx.fillStyle = "#FFFFFF";
         ctx.shadowColor = pulse.color;
-        ctx.shadowBlur = 14;
+        ctx.shadowBlur = 18;
         ctx.fill();
         ctx.shadowBlur = 0;
       }
@@ -237,6 +240,7 @@ export function NeuralBackground() {
         p.x += p.vx;
         p.y += p.vy;
         p.pulse += p.pulseSpeed;
+        p.ringAngle += 0.02;
 
         // Bounce from boundaries
         if (p.x < 0) {
@@ -256,7 +260,7 @@ export function NeuralBackground() {
         }
 
         const pulseFactor = Math.sin(p.pulse);
-        const currentRadius = p.baseRadius + pulseFactor * 1.1;
+        const currentRadius = p.baseRadius + pulseFactor * 1.4;
 
         // Interactive cursor proximity boost
         let proximityBoost = 1;
@@ -265,23 +269,30 @@ export function NeuralBackground() {
           const mdy = p.y - mouse.y;
           const mDist = Math.sqrt(mdx * mdx + mdy * mdy);
           if (mDist < mouse.radius) {
-            proximityBoost = 1 + (1 - mDist / mouse.radius) * 0.8;
+            proximityBoost = 1 + (1 - mDist / mouse.radius) * 1.1;
           }
         }
 
-        const finalRadius = Math.max(1.2, currentRadius * proximityBoost);
+        const finalRadius = Math.max(1.8, currentRadius * proximityBoost);
 
         // A. Outer Radiant Halo for Hubs
         if (p.isHub) {
           ctx.beginPath();
-          ctx.arc(p.x, p.y, finalRadius * 2.8, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(${p.color.rgb}, 0.15)`;
+          ctx.arc(p.x, p.y, finalRadius * 3.2, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${p.color.rgb}, 0.22)`;
           ctx.fill();
 
           ctx.beginPath();
-          ctx.arc(p.x, p.y, finalRadius * 1.7, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(${p.color.rgb}, 0.3)`;
+          ctx.arc(p.x, p.y, finalRadius * 2.0, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${p.color.rgb}, 0.42)`;
           ctx.fill();
+
+          // Rotating orbital ring for major hubs
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, finalRadius * 2.6, p.ringAngle, p.ringAngle + Math.PI * 0.8);
+          ctx.strokeStyle = `rgba(${p.color.rgb}, 0.6)`;
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
         }
 
         // B. Main Luminous Body with Intense Neon Glow
@@ -289,15 +300,15 @@ export function NeuralBackground() {
         ctx.arc(p.x, p.y, finalRadius, 0, Math.PI * 2);
         ctx.fillStyle = p.color.glow;
         ctx.shadowColor = p.color.glow;
-        ctx.shadowBlur = p.isHub ? 22 : 14;
+        ctx.shadowBlur = p.isHub ? 32 : 20;
         ctx.fill();
 
         // C. Bright White-Hot Center Core (Attention Grabbing Spark)
         ctx.beginPath();
-        ctx.arc(p.x, p.y, Math.max(0.7, finalRadius * 0.45), 0, Math.PI * 2);
-        ctx.fillStyle = p.color.core;
+        ctx.arc(p.x, p.y, Math.max(1.0, finalRadius * 0.5), 0, Math.PI * 2);
+        ctx.fillStyle = "#FFFFFF";
         ctx.shadowColor = "#FFFFFF";
-        ctx.shadowBlur = 8;
+        ctx.shadowBlur = 14;
         ctx.fill();
         ctx.shadowBlur = 0;
       }

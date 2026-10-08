@@ -188,6 +188,7 @@ export default function App() {
   const handleSelectHistoryProject = (project: ProjectRecord) => {
     setCurrentProjectTitle(project.title);
     setCurrentPrompt(project.prompt);
+    setCurrentSpecInputs(project.specInputs || null);
     setArtifacts(project.artifacts);
     setIsFinished(true);
     setIsExecuting(false);

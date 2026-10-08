@@ -18,7 +18,7 @@
  * All prompts strictly eliminate banned tokens ("item", "items", "data", "record", "/api/items", "TBD", "placeholder").
  */
 
-import { detectDomainEntities } from "./domainSynthesizer";
+import { detectDomainEntities, analyzeDomainProfile } from "./domainSynthesizer";
 import { sanitizeAndFormatMarkdown, sanitizeBannedTokens } from "./markdownSanitizer";
 
 export type PromptStrategyType =
@@ -265,8 +265,9 @@ export function generateVibePromptsForStrategy(
   }
 ): GeneratedVibePrompt[] {
   const brief = userPrompt.trim() || projectTitle;
-  const cleanTitle = projectTitle.trim() || "Cloud Enterprise Platform";
-  const { primaryEntity, secondaryEntity, domainApiSlug } = detectDomainEntities(brief, cleanTitle);
+  const profile = analyzeDomainProfile(brief, projectTitle);
+  const cleanTitle = profile.cleanTitle;
+  const { primaryEntity, secondaryEntity, domainApiSlug } = profile;
 
   switch (strategy) {
     case "zeroshot":
@@ -681,7 +682,7 @@ VISUAL & MOTION REQUIREMENTS:
       return [
         {
           id: "vibe_01",
-          title: `Vibe Prompt #1: Next.js Frontend Core & UI Experience for ${cleanTitle}`,
+          title: `Vibe Prompt #1: ${profile.frontend} Core & UI Experience for ${cleanTitle}`,
           target: "Frontend Architect / Cursor",
           strategy: "oneshot",
           content: sanitizeAndFormatMarkdown(`Build the production frontend application for '${cleanTitle}'.
@@ -689,29 +690,41 @@ VISUAL & MOTION REQUIREMENTS:
 Original Project Brief:
 "${brief}"
 
-Frontend Requirements:
-- Build responsive, modern screens using Next.js App Router and Tailwind CSS.
-- Implement the interactive user flows: screen transitions, modals, user inputs, and live feedback for ${primaryEntity}s.
-- Use Lucide React icons for clean, modern iconography.
-- Set up a clean state management layer with custom React hooks.
-- Configure an Axios API service layer with request/response interceptors and error boundaries.
-- Theme: Ultra-dark cybernetic (#0B0F17 background, #131924 cards with #1E293B borders, cyan-to-blue linear gradients #06B6D4 to #3B82F6).`),
+Frontend Architecture & UI Specifications:
+- Framework: ${profile.frontend} with ${profile.uiFramework}
+- Theme: ${profile.themeDescription}
+- Canvas Background: \`${profile.bgHex}\` | Accent Gradients: \`${profile.accentColors}\` | Badges: ${profile.badgeStyle}
+
+Key Components & Interactions:
+${profile.keyFeatures.map((f, i) => `${i + 1}. **${f.title}:** ${f.description}`).join("\n")}
+
+- Implement 4-state component matrix (Default, Hover/Active, Loading Skeleton, Error) for all interactive elements.
+- Wire full client state hooks, optimistic UI mutations (sub-50ms), and 60fps gesture transitions.`),
         },
         {
           id: "vibe_02",
-          title: `Vibe Prompt #2: Backend Services, PostgreSQL DDL & OpenAPI for ${cleanTitle}`,
+          title: `Vibe Prompt #2: ${profile.backend} Services, Persistence & AI Engine for ${cleanTitle}`,
           target: "Backend Architect / Claude Code",
           strategy: "oneshot",
-          content: sanitizeAndFormatMarkdown(`Build the production backend API service and database persistence for '${cleanTitle}'.
+          content: sanitizeAndFormatMarkdown(`Build the production backend service, persistence tier, and AI engine for '${cleanTitle}'.
 
 Original Project Brief:
 "${brief}"
 
-Backend Requirements:
-- Implement REST API endpoints at \`/api/${domainApiSlug}\` with Pydantic request validation schemas.
-- Implement the PostgreSQL 16 DDL schema and DynamoDB persistence for ${primaryEntity}s and ${secondaryEntity}s.
-- Provide authentication middleware (Cognito / JWT), CORS whitelist, and robust error handling.
-- Include a health check route GET /api/health and comprehensive test stubs.`),
+Backend Architecture Specifications:
+- Runtime: ${profile.backend} with asynchronous request pipelines and Pydantic validation schemas.
+- Persistence Tier: ${profile.storageSolution}
+- Primary AI Engine: ${profile.aiPrimaryModel} (${profile.aiTaskDescription})
+- Failover Engine: ${profile.aiFailoverModel} triggered automatically if primary model latency > 3000ms or HTTP 429 received.
+
+Key API Routes to Implement:
+- Ingestion & Upload: \`POST /api/v1/${domainApiSlug}/upload\`
+- AI Analysis: \`POST /api/v1/${domainApiSlug}/{id}/critique\`
+- Feed & Queries: \`GET /api/v1/${domainApiSlug}/feed\`
+- User Interactions: \`POST /api/v1/${domainApiSlug}/{id}/rate\` and \`POST /api/v1/${domainApiSlug}/{id}/comments\`
+
+Security & Constraints:
+- Zero-Trust validation, pre-signed upload security, and zero generic placeholder tokens.`),
         },
         {
           id: "vibe_03",
@@ -723,11 +736,11 @@ Backend Requirements:
 Original Project Brief:
 "${brief}"
 
-Integration & Cloud Tasks:
-- Connect the frontend client to the backend endpoints at \`/api/${domainApiSlug}\` with real-time UI updates.
-- Set up cloud object storage for any file/media uploads required by the application.
-- Configure environment variables and deployment scripts for production hosting (Netlify frontend, Render/AWS backend).
-- Verify end-to-end user journeys from onboarding through core actions.`),
+Integration & Deployment Protocol:
+- Wire ${profile.frontend} client hooks directly to ${profile.backend} endpoints with optimistic updates and error boundaries.
+- Configure cloud hosting: Netlify / Vercel for frontend, Render / AWS for backend, and ${profile.databases}.
+- Add end-to-end automated test assertions validating the primary user journey from upload to visual AI critique and feed rating.
+- Ensure 99.95% availability with circuit-breaker failover across AI model providers.`),
         },
       ];
   }

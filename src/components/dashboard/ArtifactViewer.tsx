@@ -87,6 +87,7 @@ export function ArtifactViewer({
   const [selectedPlatformId, setSelectedPlatformId] = useState<string>("cursor");
   const [selectedPromptIndex, setSelectedPromptIndex] = useState<number>(0);
   const [platformLaunchNotice, setPlatformLaunchNotice] = useState<string | null>(null);
+  const [vibeViewMode, setVibeViewMode] = useState<"document" | "cards">("document");
 
   const safeTitle = projectTitle.toLowerCase().replace(/[^a-z0-9]/g, "_") || "project";
 
@@ -724,11 +725,13 @@ export function ArtifactViewer({
               <div className="flex items-center gap-2">
                 <Database className="w-4 h-4 text-cyan-400" />
                 <span className="text-xs font-mono text-cyan-300 font-semibold">
-                  PostgreSQL 16 Production DDL, Single-Table DynamoDB Schema &amp; Seed Data
+                  {sqlText.includes("Firestore")
+                    ? "Firebase Firestore NoSQL Collections, Security Rules & Storage"
+                    : "PostgreSQL 16 Production DDL, Single-Table DynamoDB Schema & Seed Data"}
                 </span>
               </div>
               <span className="px-2 py-0.5 rounded bg-cyan-900/60 border border-cyan-700/60 text-[10px] font-mono text-cyan-200">
-                Normalized 3NF + Single-Table
+                {sqlText.includes("Firestore") ? "Firestore NoSQL + Rules" : "Normalized 3NF + Single-Table"}
               </span>
             </div>
             <pre className="whitespace-pre-wrap font-mono bg-[#0B0F17] p-5 rounded-xl border border-[#1E293B] text-cyan-300/90 text-xs leading-relaxed overflow-x-auto">
@@ -882,21 +885,56 @@ export function ArtifactViewer({
               </div>
             </div>
 
-            {/* MODULAR VIBE PROMPTS LIST */}
+            {/* VIBE PROMPTS VIEW (DOCUMENT VS MODULAR CARDS) */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between px-1">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
                 <div className="flex items-center gap-2">
                   <Layers className="w-4 h-4 text-cyan-400" />
                   <span className="text-xs font-mono uppercase tracking-wider text-slate-300 font-bold">
                     PROMPT SUITE ({activeVibePrompts.length} MODULAR PROMPTS)
                   </span>
                 </div>
-                <span className="text-xs text-slate-400">
-                  Active Strategy: <strong className="text-purple-300">{activeStrategyDef.label}</strong>
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-400">
+                    Active Strategy: <strong className="text-purple-300">{activeStrategyDef.label}</strong>
+                  </span>
+                  <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[#0B0F17] border border-[#1E293B]">
+                    <button
+                      onClick={() => setVibeViewMode("document")}
+                      className={`px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
+                        vibeViewMode === "document"
+                          ? "bg-purple-500/20 text-purple-300 border border-purple-500/40"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      Export Document
+                    </button>
+                    <button
+                      onClick={() => setVibeViewMode("cards")}
+                      className={`px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
+                        vibeViewMode === "cards"
+                          ? "bg-purple-500/20 text-purple-300 border border-purple-500/40"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      Prompt Cards
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-4">
+              {vibeViewMode === "document" ? (
+                <div className="space-y-3">
+                  <div className="p-3 rounded-xl bg-[#0B0F17] border border-purple-800/40 flex items-center justify-between text-xs font-mono text-purple-300">
+                    <span>Full Canonical Prompt Suite (Identical to Exported Document)</span>
+                    <span className="text-[10px] text-slate-400">Strategy: {activeStrategyDef.label} · Platform: {activePlatform.name}</span>
+                  </div>
+                  <pre className="whitespace-pre-wrap font-sans bg-[#0B0F17] p-5 rounded-xl border border-[#1E293B] text-slate-200 text-sm leading-relaxed overflow-x-auto">
+                    {vibePromptsText}
+                  </pre>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4">
                 {activeVibePrompts.map((promptItem, idx) => (
                   <div
                     key={promptItem.id || `prompt_${idx}`}
@@ -987,7 +1025,8 @@ export function ArtifactViewer({
                     </pre>
                   </div>
                 ))}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         )}

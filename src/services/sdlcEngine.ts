@@ -13,6 +13,7 @@ import {
   generateFullApiContractsAndCode,
   detectDomainEntities,
 } from "./domainSynthesizer";
+import { generateVibePromptsForStrategy } from "./vibeCoderStrategies";
 import { getStoredEmail } from "../config/aws-cognito";
 import { sanitizeAndFormatMarkdown } from "./markdownSanitizer";
 import { ProjectSpecificationInputs } from "../types/projectSpec";
@@ -29,6 +30,7 @@ export interface ProjectRecord {
   SK?: string; // DynamoDB Sort Key: PROJECT#<id>
   storageEngine?: string;
   artifacts: ArtifactData;
+  specInputs?: ProjectSpecificationInputs;
 }
 
 export function getUserProjectsStorageKey(userEmail?: string): string {
@@ -882,61 +884,17 @@ Execute Master Synthesis & Quality Gate Audit:
   // 4. Full API Contracts, Usage Structure & Example Code Snippets
   const fullApiContracts = generateFullApiContractsAndCode(projectTitle, userPrompt, specInputs);
 
-  const { primaryEntity, secondaryEntity, domainApiSlug } = detectDomainEntities(userPrompt, projectTitle);
-  const frontendStack = specInputs?.frontend || "Next.js (App Router)";
-  const backendStack = specInputs?.backend || "Python (FastAPI)";
-  const uiStack = specInputs?.uiStyling?.join(", ") || "Tailwind CSS v4, shadcn/ui";
-  const dbStack = specInputs?.database?.join(", ") || "PostgreSQL 16 + Redis";
-  const aiStack = specInputs?.aiIntegration?.models?.join(" and ") || "Claude 3.7 and Gemini 3.8";
-
   // 5. Full Vibe-Coder Prompts for Cursor, Claude Code, Windsurf, Bolt.new, Lovable
-  const vibeCoderPrompts = [
-    {
-      id: "vibe_01",
-      title: `Vibe Prompt #1: ${frontendStack} Core & UI Experience for ${projectTitle}`,
-      target: "Frontend Architect / Cursor",
-      content: sanitizeAndFormatMarkdown(`Build the production frontend application for '${projectTitle}'.
-
-Original Project Brief:
-"${userPrompt}"
-
-Frontend Specifications (from Agent 4 UI/UX Designer):
-- Build responsive, modern screens using ${frontendStack} and ${uiStack}.
-- Implement the 4-state component matrix: Default, Hover/Active, Loading Skeleton, and Error states for ${primaryEntity} workflows.
-- Connect to Server-Sent Events (SSE) telemetry stream for real-time ${secondaryEntity} updates.
-- Configure Cognito Bearer token injection on all client-server requests to /api/v1/${domainApiSlug}.`),
-    },
-    {
-      id: "vibe_02",
-      title: `Vibe Prompt #2: ${backendStack} Services, Database DDL & OpenAPI for ${projectTitle}`,
-      target: "Backend Architect / Claude Code",
-      content: sanitizeAndFormatMarkdown(`Build the production backend API service and database persistence for '${projectTitle}'.
-
-Original Project Brief:
-"${userPrompt}"
-
-Backend Specifications (from Agent 3 Systems Architect):
-- Implement REST API endpoints at /api/v1/${domainApiSlug} using ${backendStack} with strict validation schemas.
-- Implement the persistence tier schema for ${dbStack} for ${primaryEntity}s and child ${secondaryEntity}s.
-- Enforce Zero-Trust security boundary with OAuth2 PKCE flow and AES-256-GCM encryption.
-- Strictly forbid generic tokens: use explicit domain models (${primaryEntity}, ${secondaryEntity}) throughout.`),
-    },
-    {
-      id: "vibe_03",
-      title: `Vibe Prompt #3: Full-Stack Integration & Cloud Deployment for ${projectTitle}`,
-      target: "Full Stack Integrator / Bolt.new",
-      content: sanitizeAndFormatMarkdown(`Assemble and deploy the full-stack system for '${projectTitle}'.
-
-Original Project Brief:
-"${userPrompt}"
-
-Integration Roadmap (from Master Orchestrator):
-- Wire together ${frontendStack} client with ${backendStack} service.
-- Connect ${dbStack} persistence with tenant-isolated migrations.
-- Connect AI Model Engine: ${aiStack}.
-- Enforce 100% Gherkin acceptance criteria verified by the Orchestrator Quality Gate.`),
-    },
-  ];
+  const vibeCoderPrompts = generateVibePromptsForStrategy("oneshot", projectTitle, userPrompt, {
+    prd: fullPrdDocument,
+    schema: fullSqlSchemas,
+    api: fullApiContracts,
+  }).map((p) => ({
+    id: p.id,
+    title: p.title,
+    target: p.target,
+    content: p.content,
+  }));
 
   const artifacts: ArtifactData = {
     research_report: fullResearchReport,
@@ -965,6 +923,7 @@ Integration Roadmap (from Master Orchestrator):
       PK: `USER#${activeUserEmail.toLowerCase()}`,
       SK: `PROJECT#${projectId}`,
       storageEngine: "AWS DynamoDB (Single-Table)",
+      specInputs,
     },
     activeUserEmail
   );

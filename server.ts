@@ -443,10 +443,10 @@ function resolveBedrockCandidates(requestedModels: (string | undefined)[], targe
         } catch (err: any) {
           bedrockError = err;
           const errName = err.name || 'Error';
-          console.log(`[Bedrock Routing Note] ${modelLabel} status (${errName}). Attempting next candidate or failover...`);
-          if (err.name === 'InvalidSignatureException') {
-            console.log(`[Bedrock Diagnostic] Signature check note: AWS IAM Secret Access Key format or permissions. Transitioning to failover.`);
-            break; // Secret key error affects all Bedrock models
+          console.log(`[Bedrock Candidate Check] ${modelLabel} evaluation completed (${errName}). Assessing failover sequence.`);
+          if (err.name === 'InvalidSignatureException' || err.name === 'AccessDeniedException') {
+            console.log(`[Bedrock Diagnostic] IAM policy or credentials evaluation note (${errName}). Engaging automated failover.`);
+            break; // Secret key error or access denial affects all Bedrock models
           }
         }
       }
@@ -493,7 +493,7 @@ function resolveBedrockCandidates(requestedModels: (string | undefined)[], targe
           for (const model of candidateModels) {
             try {
               console.log(`[Google Gemini Failover] Testing model: ${model} with ${keyLabel}...`);
-              const resp = await aiInstance.models.generateContent({
+              const callPromise = aiInstance.models.generateContent({
                 model,
                 contents: prompt,
                 config: {
@@ -501,6 +501,10 @@ function resolveBedrockCandidates(requestedModels: (string | undefined)[], targe
                   temperature: 0.2
                 }
               });
+              const timeoutPromise = new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('GEMINI_CALL_TIMEOUT')), 4500)
+              );
+              const resp = await Promise.race([callPromise, timeoutPromise]);
               if (resp?.text) {
                 geminiRespText = resp.text;
                 matchedModel = model;
@@ -635,7 +639,7 @@ Please enhance this exact project into a comprehensive, high-context specificati
     for (const key of geminiKeysPool) {
       try {
         const ai = new GoogleGenAI({ apiKey: key });
-        const candidateModels = ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.5-pro'];
+        const candidateModels = ['gemini-3.8-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
         for (const model of candidateModels) {
           try {
             const resp = await ai.models.generateContent({
@@ -663,7 +667,7 @@ Please enhance this exact project into a comprehensive, high-context specificati
     try {
       const ai = new GoogleGenAI();
       const resp = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.8-flash',
         contents: userPrompt,
         config: {
           systemInstruction,
@@ -672,7 +676,7 @@ Please enhance this exact project into a comprehensive, high-context specificati
       });
       if (resp?.text && resp.text.trim().length > 100) {
         console.log(`🪄 [Auto-Improve Prompt] ✅ Successfully generated spec via default Gemini environment!`);
-        return res.json({ success: true, text: resp.text.trim(), model: 'gemini-2.5-flash' });
+        return res.json({ success: true, text: resp.text.trim(), model: 'gemini-3.8-flash' });
       }
     } catch {
       // continue

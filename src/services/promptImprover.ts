@@ -25,8 +25,11 @@ export async function autoImproveProjectDescription(
   const aiModels = specInputs.aiIntegration?.models?.join(" and ") || "AWS Bedrock Claude Sonnet with Gemini Failover";
   const agentMode = specInputs.aiIntegration?.agentMode || "Multi-Agent";
 
-  // 1. Try calling server-side LLM endpoint (Gemini / Bedrock)
+  // 1. Try calling server-side LLM endpoint (Gemini / Bedrock) with strict timeout
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+
     const res = await fetch("/api/improve-prompt", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -35,7 +38,9 @@ export async function autoImproveProjectDescription(
         projectName: title,
         specInputs,
       }),
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
 
     if (res.ok) {
       const data = await res.json();
@@ -44,7 +49,7 @@ export async function autoImproveProjectDescription(
       }
     }
   } catch (err) {
-    console.warn("Server prompt improve note, using smart client synthesizer:", err);
+    // Graceful fallback to client context synthesizer on timeout or network notice
   }
 
   // 2. Intelligent Client-Side Context Synthesizer (Zero-Failure Execution)
@@ -112,7 +117,7 @@ function synthesizePreservedSpecification(
 
     // If the sentence describes user interactions or UI features
     if (
-      /swipe|feed|slider|rating|rate|like|comment|modal|upload|photo|image|filter|tag|badge|occasion|camera|critique|score|sheet|dashboard|hud|fallback|throttle/i.test(sentence)
+      /swipe|feed|slider|rating|rate|like|comment|modal|upload|photo|image|filter|tag|badge|occasion|camera|critique|score|sheet|dashboard|hud|fallback|throttle|review|workflow/i.test(sentence)
     ) {
       // Clean up sentence for bullet presentation
       const cleaned = sentence
@@ -129,16 +134,29 @@ function synthesizePreservedSpecification(
     sentences.forEach((s) => detectedFeatures.push(s.replace(/\.$/, "")));
   }
 
-  // Detect specific tech tokens mentioned in user text to ensure they take precedence
-  const mentionedTech: string[] = [];
-  if (/next\.?js/i.test(userText)) mentionedTech.push("Next.js (App Router)");
-  if (/tailwind/i.test(userText)) mentionedTech.push("Tailwind CSS");
-  if (/shadcn/i.test(userText)) mentionedTech.push("shadcn/ui");
-  if (/fastapi|python/i.test(userText)) mentionedTech.push("Python (FastAPI)");
-  if (/firebase|firestore/i.test(userText)) mentionedTech.push("Firebase Firestore DB");
-  if (/cloud storage|s3/i.test(userText)) mentionedTech.push("Cloud Storage (Object Store)");
-  if (/bedrock|claude/i.test(userText)) mentionedTech.push("AWS Bedrock (Claude 3.5 Sonnet)");
-  if (/gpt-4o|chatgpt/i.test(userText)) mentionedTech.push("GPT-4o Vision Failover");
+  // Detect specific tech & design tokens mentioned in user text to ensure they take precedence
+  let resolvedDb = ctx.db;
+  if (/firebase|firestore/i.test(userText) && /cloud storage/i.test(userText)) {
+    resolvedDb = "Firebase Firestore DB and Firebase Cloud Storage (Asset Ingestion & Metadata)";
+  } else if (/firebase|firestore/i.test(userText)) {
+    resolvedDb = "Firebase Firestore DB (Document Store & Realtime Sync)";
+  } else if (/supabase/i.test(userText)) {
+    resolvedDb = "Supabase PostgreSQL 16 (with pgvector & Auth)";
+  }
+
+  let resolvedAi = ctx.aiModels;
+  if (/bedrock/i.test(userText) && /gpt-4o|chatgpt/i.test(userText)) {
+    resolvedAi = "AWS Bedrock (Claude 3.5 Sonnet) with autonomous fallback to GPT-4o/ChatGPT-5 for vision analysis";
+  } else if (/claude/i.test(userText) && /gemini/i.test(userText)) {
+    resolvedAi = "Anthropic Claude 3.5 Sonnet (AWS Bedrock) with Google Gemini failover";
+  }
+
+  // Extract custom styling tokens if present
+  let customStyling = ctx.ui;
+  const styleMatch = userText.match(/styled with ([^.]+?)(?:\.|$)/i);
+  if (styleMatch && styleMatch[1]) {
+    customStyling = `${ctx.ui} (${styleMatch[1].trim()})`;
+  }
 
   const primaryOverview = sentences[0] || userText;
 
@@ -156,10 +174,10 @@ ${detectedFeatures.map((feat) => `- **${extractFeatureHeading(feat)}:** ${feat}.
 ---
 
 ### Technical Stack & Architecture
-- **Client Application (Frontend):** ${ctx.frontend} (${ctx.platform}) styled with ${ctx.ui}. Employs modern responsive layouts, optimistic state mutations, and accessibility compliance.
+- **Client Application (Frontend):** ${ctx.frontend} (${ctx.platform}) styled with ${customStyling}. Employs modern responsive layouts, optimistic state mutations, and accessibility compliance.
 - **Backend Services:** ${ctx.backend} managing asynchronous request pipelines, file/image upload processing, and validation schemas.
-- **AI Intelligence & Vision Engine:** ${ctx.aiModels} configured in ${ctx.agentMode} mode with automated model failover for continuous uptime.
-- **Persistence & Cloud Storage:** ${ctx.db}${mentionedTech.includes("Firebase Firestore DB") ? " and Firebase Cloud Storage for high-resolution assets" : ""}.
+- **AI Intelligence & Vision Engine:** ${resolvedAi} configured in ${ctx.agentMode} mode with automated model failover for continuous uptime.
+- **Persistence & Cloud Storage:** ${resolvedDb}.
 - **Security Boundaries:** OAuth2 authentication, zero-trust token verification, and role-based permissions.
 
 ---

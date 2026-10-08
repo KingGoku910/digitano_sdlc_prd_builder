@@ -681,6 +681,22 @@ export async function generatePdfBlob(title: string, markdownContent: string): P
       doc.setTextColor(30, 41, 59);
       doc.text(bLines, margin + 14, y);
       y += bLines.length * 12 + 3;
+    } else if (trimmed.startsWith("> ")) {
+      // Blockquote line
+      const quoteContent = trimmed.replace(/^>\s+/, "").replace(/\*\*/g, "").replace(/\`/g, "");
+      const qLines = doc.splitTextToSize(quoteContent, maxContentWidth - 20);
+      const qHeight = qLines.length * 12 + 6;
+      checkPageBreak(qHeight + 4);
+
+      // Left bar
+      doc.setFillColor(6, 182, 212); // cyan-500
+      doc.rect(margin, y - 2, 3, qHeight, "F");
+
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(8.5);
+      doc.setTextColor(71, 85, 105); // slate-600
+      doc.text(qLines, margin + 10, y + 8);
+      y += qHeight + 4;
     } else {
       // Regular paragraph line
       const cleanText = trimmed.replace(/\*\*/g, "").replace(/\`/g, "");
@@ -693,6 +709,47 @@ export async function generatePdfBlob(title: string, markdownContent: string): P
       doc.text(pLines, margin, y);
       y += pLines.length * 12 + 4;
     }
+  }
+
+  // Flush any open table or code block buffers at end of document
+  if (inTable && tableBuffer.length > 0) {
+    renderPdfTable(tableBuffer);
+    tableBuffer = [];
+  }
+  if (inCodeBlock && codeBuffer.length > 0) {
+    doc.setFont("courier", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(15, 23, 42);
+    const codeLinesToRender: string[] = [];
+    for (const codeLine of codeBuffer) {
+      const splitCode = doc.splitTextToSize(codeLine || " ", maxContentWidth - 16);
+      codeLinesToRender.push(...splitCode);
+    }
+    const codeLineHeight = 9.5;
+    let cIdx = 0;
+    while (cIdx < codeLinesToRender.length) {
+      const availableHeight = bottomThreshold - y;
+      const linesCanFit = Math.max(1, Math.floor((availableHeight - 12) / codeLineHeight));
+      const chunk = codeLinesToRender.slice(cIdx, cIdx + linesCanFit);
+      const chunkHeight = chunk.length * codeLineHeight + 8;
+      checkPageBreak(chunkHeight + 4);
+
+      doc.setFillColor(241, 245, 249);
+      doc.rect(margin, y - 2, maxContentWidth, chunkHeight, "F");
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.5);
+      doc.rect(margin, y - 2, maxContentWidth, chunkHeight, "S");
+      doc.setFillColor(2, 132, 199);
+      doc.rect(margin, y - 2, 3, chunkHeight, "F");
+
+      chunk.forEach((lineText, idx) => {
+        doc.text(lineText, margin + 8, y + 7 + idx * codeLineHeight);
+      });
+
+      y += chunkHeight + 4;
+      cIdx += chunk.length;
+    }
+    codeBuffer = [];
   }
 
   // Add Page Numbers in running footer
