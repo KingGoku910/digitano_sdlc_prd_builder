@@ -165,10 +165,10 @@ export function analyzeDomainProfile(
     : "AWS Cognito OAuth2 PKCE RS256 JWT Authentication";
 
   // AI models
-  let aiPrimaryModel = "AWS Bedrock (Anthropic Claude 3.5 Sonnet / Claude 4.6 Sonnet)";
+  let aiPrimaryModel = "AWS Bedrock (Anthropic Claude Sonnet 5 & Claude Haiku 4.5)";
   let aiFailoverModel = "GPT-4o / Google Gemini Flash 3.8";
   if (/bedrock/i.test(text) && /claude/i.test(text)) {
-    aiPrimaryModel = "AWS Bedrock (Claude 3.5 Sonnet)";
+    aiPrimaryModel = "AWS Bedrock (Claude Sonnet 5)";
   }
   if (/gpt-?4o/i.test(text)) {
     aiFailoverModel = "GPT-4o Vision API";
@@ -264,7 +264,7 @@ export function analyzeDomainProfile(
         },
         {
           title: "AWS Bedrock Vision Analysis Engine",
-          description: "Dispatches images to AWS Bedrock (Claude 3.5 Sonnet) for visual analysis to return a 0-10 style score and a 2-sentence critique overlaid on the outfit post.",
+          description: "Dispatches images to AWS Bedrock (Claude Sonnet 5) for visual analysis to return a 0-10 style score and a 2-sentence critique overlaid on the outfit post.",
         },
         {
           title: "Automated Inference Failover",
@@ -321,10 +321,10 @@ export function analyzeDomainProfile(
           title: "AWS Bedrock Vision Analysis & Style Critique Overlay",
           priority: "Must",
           asA: "Creator",
-          iWant: "the FastAPI backend to pass my outfit photo to AWS Bedrock Claude Sonnet",
+          iWant: "the FastAPI backend to pass my outfit photo to AWS Bedrock Claude Sonnet 5",
           soThat: "a 0-10 style score and a 2-sentence critique are computed and overlaid directly on the post",
           given: "an outfit photo has been uploaded successfully",
-          when: "FastAPI invokes AWS Bedrock Claude 3.5 Sonnet with the image payload",
+          when: "FastAPI invokes AWS Bedrock Claude Sonnet 5 with the image payload",
           then: "a 0-10 numeric score and a 2-sentence styling critique are returned and displayed as a clean semi-transparent overlay",
         },
         {
@@ -525,7 +525,7 @@ export function generateDomainDeliverable(
 #### 1. Empirical Ground Truth & Competitor Benchmarks
 ${profile.isFashion
   ? `- **Vertical Feed Mechanics:** Verified 60fps swipe feed gestures, hardware-accelerated CSS snap transitions, and touch inertia curves modeled after top mobile platforms (TikTok/Tinder).
-- **Vision AI Latency Benchmarks:** AWS Bedrock Claude 3.5 Sonnet achieves average vision turnaround of ~1.2s. Configured failover circuit breaker to ${profile.aiFailoverModel} with an 850ms timeout window.
+- **Vision AI Latency Benchmarks:** AWS Bedrock Claude Sonnet 5 achieves average vision turnaround of ~1.2s. Configured failover circuit breaker to ${profile.aiFailoverModel} with an 850ms timeout window.
 - **Asset Storage & Cold Starts:** Evaluated Firebase Cloud Storage for high-throughput image asset ingestion alongside Firebase Firestore DB for sub-40ms document reads.`
   : `- **Competitor Standards:** Analyzed existing market solutions. Evaluated latency constraints, library stability for ${profile.frontend} and ${profile.backend}, and verified zero hallucinated API signatures.
 - **Model Routing SLA:** Configured automated failover between primary ${profile.aiPrimaryModel} and secondary ${profile.aiFailoverModel}.`}
@@ -712,7 +712,7 @@ Every technical assertion, library version, and performance threshold was verifi
 - **Empirical Findings & Market Benchmarks:**
   ${profile.isFashion
     ? `- *Current Market Failure:* Traditional fashion rating portals suffer from static pagination, slow upload workflows, and lack immediate visual AI critique feedback.
-  - *Opportunity:* Introducing a TikTok/Tinder-style vertical swipe feed with 0-10 slider ratings and AWS Bedrock Claude Sonnet 2-sentence critiques establishes a transformative user experience.`
+  - *Opportunity:* Introducing a TikTok/Tinder-style vertical swipe feed with 0-10 slider ratings and AWS Bedrock Claude Sonnet 5 2-sentence critiques establishes a transformative user experience.`
     : `- *Current Market Failure:* Existing solutions require manual intervention, exhibiting average turnaround times of 35-90 minutes and 450ms+ interaction latencies.
   - *Opportunity:* Automating ${profile.primaryAction} with sub-100ms optimistic state updates establishes an immediate operational advantage.`}
 - **Agent Reasoning & Decisions:**
@@ -832,7 +832,7 @@ ${profile.cleanTitle} is an enterprise-grade full-stack web application engineer
 
 ## 2. Problem Statement
 ${profile.isFashion
-  ? `Contemporary fashion discovery and outfit rating platforms suffer from fragmented, text-heavy feeds, clunky desktop layouts, and a total lack of instant objective style critiques. Users who upload looks must wait hours for arbitrary comments or receive no feedback at all. Reviewers face slow-loading multi-page feeds that interrupt the browsing flow. ${profile.cleanTitle} solves this crisis by introducing a TikTok/Tinder-style vertical full-screen swipe feed with occasion tags in sky-blue pill badges, an interactive 0-10 rating slider, a comment bottom sheet, and instantaneous AI visual style critiques (0-10 score + 2-sentence feedback) generated via AWS Bedrock Claude Sonnet with autonomous failover.`
+  ? `Contemporary fashion discovery and outfit rating platforms suffer from fragmented, text-heavy feeds, clunky desktop layouts, and a total lack of instant objective style critiques. Users who upload looks must wait hours for arbitrary comments or receive no feedback at all. Reviewers face slow-loading multi-page feeds that interrupt the browsing flow. ${profile.cleanTitle} solves this crisis by introducing a TikTok/Tinder-style vertical full-screen swipe feed with occasion tags in sky-blue pill badges, an interactive 0-10 rating slider, a comment bottom sheet, and instantaneous AI visual style critiques (0-10 score + 2-sentence feedback) generated via AWS Bedrock Claude Sonnet 5 with autonomous failover.`
   : `In contemporary ${profile.domainContext}, organizations rely on fragmented manual workflows, spreadsheet trackers, and legacy monolithic architectures that create severe operational bottlenecks. Stakeholders experience turnaround delays exceeding 45 minutes, lack real-time visibility into active state transitions, and face severe regulatory liabilities due to unverified audit logs. ${profile.cleanTitle} solves this crisis by introducing automated ${profile.primaryAction}, live event telemetry, and tamper-evident audit trails.`}
 
 ---
@@ -925,7 +925,7 @@ ${profile.stories.map((s) => `| **${s.id}** | ${s.given} | ${s.when} | ${s.then}
 | Type | Item | Owner | Mitigation Strategy |
 | :--- | :--- | :--- | :--- |
 | **Risk** | LLM vision token consumption costs during peak usage bursts | Principal Architect | Pre-compress uploaded images to max 1024x1024 before model dispatch |
-| **Risk** | Upstream cloud rate limits during community viral spikes | DevOps Engineer | Dual-engine failover circuit between Bedrock Claude Sonnet and ${profile.aiFailoverModel} |
+| **Risk** | Upstream cloud rate limits during community viral spikes | DevOps Engineer | Dual-engine failover circuit between Bedrock Claude Sonnet 5 and ${profile.aiFailoverModel} |
 | **Open Question** | Should community comments support threaded replies in Phase 2? | UI/UX Lead | Defer to post-MVP sprint; prioritize fast flat comment list |
 
 ---
@@ -1366,7 +1366,7 @@ The platform's APIs execute in a strict chronological sequence mirroring the use
 
 ### Phase 2: Vision AI Style Analysis & Critique Overlay
 - **Endpoint:** \`POST /api/v1/outfits/{outfitId}/critique\`
-- **Purpose:** Dispatches the stored outfit image to AWS Bedrock (Claude 3.5 Sonnet) for visual intelligence, returning a 0-10 style score and a 2-sentence critique. Automatically trips circuit breaker to ${profile.aiFailoverModel} if throttled.
+- **Purpose:** Dispatches the stored outfit image to AWS Bedrock (Claude Sonnet 5) for visual intelligence, returning a 0-10 style score and a 2-sentence critique. Automatically trips circuit breaker to ${profile.aiFailoverModel} if throttled.
 - **Response 200 OK (JSON):**
 \`\`\`json
 {
@@ -1374,7 +1374,7 @@ The platform's APIs execute in a strict chronological sequence mirroring the use
   "outfitId": "outfit_8942a1bc",
   "aiStyleScore": 8.7,
   "aiCritique": "The tailored velvet blazer and structured satin lapel create a striking, sophisticated silhouette ideal for an evening wedding reception. Swapping the silver cuff for minimal platinum accents would elevate the monochrome cohesion even further.",
-  "engineUsed": "AWS Bedrock (anthropic.claude-3-5-sonnet-20241022-v2:0)",
+  "engineUsed": "AWS Bedrock (anthropic.claude-sonnet-5)",
   "failoverEngaged": false
 }
 \`\`\`

@@ -74,8 +74,8 @@ def get_bedrock_candidates(model_id: str, region: str = "us-east-1") -> List[str
         candidates.append(model_id)
 
     # Active on-demand base models on Bedrock
-    candidates.append("anthropic.claude-3-sonnet-20240229-v1:0")
-    candidates.append("anthropic.claude-3-haiku-20240307-v1:0")
+    candidates.append("anthropic.claude-sonnet-5")
+    candidates.append("anthropic.claude-haiku-4-5-20251001-v1:0")
 
     # Deduplicate while preserving order
     seen = set()
@@ -101,7 +101,7 @@ def run_agent_with_fallback(
     
     payload = {
         "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": 4096,
+        "max_tokens": 65,536,
         "messages": [{"role": "user", "content": prompt}]
     }
 
@@ -127,10 +127,10 @@ def run_agent_with_fallback(
     return adk_agent_instance.run(prompt)
 
 # Model ID Constants
-ORCHESTRATOR_PRIMARY = "anthropic.claude-sonnet-4-6"
+ORCHESTRATOR_PRIMARY = "anthropic.claude-sonnet-5"
 ORCHESTRATOR_FAILOVER = "gemini-3.5-pro"
 
-SUB_AGENT_PRIMARY = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+SUB_AGENT_PRIMARY = "anthropic.claude-haiku-4-5-20251001-v1:0"
 SUB_AGENT_FAILOVER = "gemini-3.5-flash"
 
 # Guardrail banned tokens definition
@@ -161,7 +161,7 @@ def sanitize_and_audit(content: str, agent_name: str) -> str:
 # ==============================================================================
 
 researcher_agent = Agent(
-    model=SUB_AGENT_FAILOVER,
+    model=ORCHESTRATOR_PRIMARY,
     name="researcher_agent",
     description="Domain context and technical constraint researcher.",
     instruction="""
@@ -176,7 +176,7 @@ researcher_agent = Agent(
 )
 
 agent_1_vision = Agent(
-    model=SUB_AGENT_FAILOVER,
+    model=SUB_AGENT_PRIMARY,
     name="agent_1_vision",
     description="Defines product vision, personas, and non-goals.",
     instruction="""
@@ -190,7 +190,7 @@ agent_1_vision = Agent(
 )
 
 agent_2_requirements = Agent(
-    model=SUB_AGENT_FAILOVER,
+    model=SUB_AGENT_PRIMARY,
     name="agent_2_requirements",
     description="Maps functional requirements and Gherkin user stories.",
     instruction="""
@@ -205,7 +205,7 @@ agent_2_requirements = Agent(
 )
 
 agent_3_architecture = Agent(
-    model=SUB_AGENT_FAILOVER,
+    model=SUB_AGENT_PRIMARY,
     name="agent_3_architecture",
     description="Generates technical architecture and API specs.",
     instruction="""
@@ -218,7 +218,7 @@ agent_3_architecture = Agent(
 )
 
 agent_4_uiux = Agent(
-    model=SUB_AGENT_FAILOVER,
+    model=SUB_AGENT_PRIMARY,
     name="agent_4_uiux",
     description="Outlines screen-by-screen UX and state matrices.",
     instruction="""
@@ -231,7 +231,7 @@ agent_4_uiux = Agent(
 )
 
 agent_5_risks = Agent(
-    model=SUB_AGENT_FAILOVER,
+    model=SUB_AGENT_PRIMARY,
     name="agent_5_risks",
     description="Identifies security, compliance, and edge cases.",
     instruction="""
@@ -244,7 +244,7 @@ agent_5_risks = Agent(
 )
 
 agent_6_metrics = Agent(
-    model=SUB_AGENT_FAILOVER,
+    model=SUB_AGENT_PRIMARY,
     name="agent_6_metrics",
     description="Defines telemetry KPIs and release milestones.",
     instruction="""

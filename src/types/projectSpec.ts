@@ -135,6 +135,12 @@ export const DATABASE_PRESETS: DatabasePreset[] = [
     databases: ["PostgreSQL 16", "Pinecone (Vector DB)", "Redis"],
   },
   {
+    id: "firebase_firestore",
+    name: "Firebase Firestore + Cloud Storage (Serverless NoSQL)",
+    description: "Multi-tenant document collections, real-time sync, security rules, and media asset storage.",
+    databases: ["Firebase Firestore DB", "Firebase Cloud Storage"],
+  },
+  {
     id: "qdrant_weaviate",
     name: "Qdrant / Weaviate Hybrid Vector & Document Store",
     description: "Advanced semantic search, multi-modal embeddings, and hybrid BM25 + dense retrieval.",
@@ -158,9 +164,8 @@ export const AI_MODELS_CATALOG: AIModelOption[] = [
   { id: "gemma-2-27b", name: "Gemma 2 (Open Weights)", manufacturer: "Google", badge: "Edge / Open" },
 
   // Anthropic
-  { id: "claude-3-7-sonnet", name: "Claude 3.7 Sonnet (Thinking)", manufacturer: "Anthropic", badge: "Hybrid Reasoning" },
-  { id: "claude-3-5-sonnet", name: "Claude 3.5 Sonnet v2", manufacturer: "Anthropic", badge: "Industry Standard" },
-  { id: "claude-3-opus", name: "Claude 3 Opus", manufacturer: "Anthropic", badge: "Deep Analytical" },
+  { id: "anthropic.claude-sonnet-5", name: "Claude Sonnet 5", manufacturer: "Anthropic", badge: "Lead Agent & Architecture" },
+  { id: "anthropic.claude-haiku-4-5-20251001-v1:0", name: "Claude Haiku 4.5", manufacturer: "Anthropic", badge: "Near-Frontier Agentic" },
 
   // OpenAI
   { id: "gpt-4o", name: "GPT-4o (Omni)", manufacturer: "OpenAI", badge: "Multimodal Leader" },

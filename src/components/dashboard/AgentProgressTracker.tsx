@@ -298,8 +298,17 @@ export function AgentProgressTracker({
           const isOutputExpanded = Boolean(expandedOutputs[agent.id]);
 
           // Fallback model details if not yet injected
-          const modelName = agent.modelInfo?.modelName || (agent.engineUsed?.includes("Gemini") ? "Google Gemini 3.5 Flash" : "Anthropic Claude Sonnet");
-          const modelId = agent.modelInfo?.modelId || (agent.engineUsed?.includes("Gemini") ? "gemini-3.5-flash" : "anthropic.claude-sonnet-4-6");
+          const isSonnetAgent =
+            agent.id === "orchestrator_agent" ||
+            agent.id === "researcher_agent" ||
+            agent.id === "agent_1_vision" ||
+            agent.id === "agent_01" ||
+            agent.id === "agent_07";
+          const defaultClaudeName = isSonnetAgent ? "Anthropic Claude Sonnet 5" : "Anthropic Claude Haiku 4.5";
+          const defaultClaudeId = isSonnetAgent ? "anthropic.claude-sonnet-5" : "anthropic.claude-haiku-4-5-20251001-v1:0";
+
+          const modelName = agent.modelInfo?.modelName || (agent.engineUsed?.includes("Gemini") ? "Google Gemini 3.5 Flash" : defaultClaudeName);
+          const modelId = agent.modelInfo?.modelId || (agent.engineUsed?.includes("Gemini") ? "gemini-3.5-flash" : defaultClaudeId);
           const provider = agent.modelInfo?.provider || (agent.engineUsed?.includes("Gemini") ? "Google GenAI API" : "AWS Bedrock Runtime (us-east-1)");
 
           return (

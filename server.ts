@@ -73,7 +73,7 @@ async function startServer() {
     res.json({
       status: 'online',
       service: 'Digitano Full-Stack SDLC Server',
-      primaryModel: 'AWS Bedrock (Claude Sonnet)',
+      primaryModel: 'AWS Bedrock (Claude Sonnet 5 & Claude Haiku 4.5)',
       failoverModel: 'Google Gemini 3.5+ Flash',
       database: 'Amazon DynamoDB (Single-Table Architecture)',
       timestamp: new Date().toISOString()
@@ -315,7 +315,7 @@ function resolveBedrockCandidates(requestedModels: (string | undefined)[], targe
   for (const m of requestedModels) {
     if (!m || typeof m !== 'string') continue;
     const trimmed = m.trim();
-    if (!trimmed || trimmed.includes('sonnet-5')) continue;
+    if (!trimmed) continue;
 
     // If it's already an inference profile or ARN
     if (trimmed.startsWith('us.') || trimmed.startsWith('eu.') || trimmed.startsWith('apac.') || trimmed.startsWith('arn:aws:')) {
@@ -333,14 +333,14 @@ function resolveBedrockCandidates(requestedModels: (string | undefined)[], targe
     candidates.push(trimmed);
   }
 
-  // Active on-demand fallback models on Bedrock
-  candidates.push('anthropic.claude-3-sonnet-20240229-v1:0');
-  candidates.push('anthropic.claude-3-haiku-20240307-v1:0');
+  // Active on-demand models on Bedrock (Claude Sonnet 5 & Claude Haiku 4.5)
+  candidates.push('anthropic.claude-sonnet-5');
+  candidates.push('anthropic.claude-haiku-4-5-20251001-v1:0');
 
   return Array.from(new Set(candidates));
 }
 
-  // Bedrock Claude Sonnet Execution Endpoint with Gemini Autonomous Failover
+  // Bedrock Claude Execution Endpoint with Gemini Autonomous Failover
   app.post('/api/bedrock/invoke', async (req, res) => {
     const { prompt, systemInstruction, customCredentials, agentName, agentId } = req.body;
 
@@ -350,25 +350,37 @@ function resolveBedrockCandidates(requestedModels: (string | undefined)[], targe
     // AWS IAM Secret Access Keys must be exactly 40 base64 characters; discard incomplete/invalid defaults
     const secretAccessKey = (rawSecret.length === 40 && rawSecret !== '20un1TmaK/JGV6p6uVKY6gLRejK+4oBySjRr9') ? rawSecret : '';
 
-    // Prioritized Bedrock Models Pool:
-    // Model 1: anthropic.claude-sonnet-4-6 (Priority 1 with inference profile support)
-    // Model 2: anthropic.claude-3-5-sonnet-20241022-v2:0 (Priority 2 with inference profile support)
+    // Specific model target per agent role:
+    // Orchestrator, Researcher, Product Owner (agent_1_vision): anthropic.claude-sonnet-5
+    // Rest of Agents (Requirements, Architecture, UI/UX, Risks, Metrics): anthropic.claude-haiku-4-5-20251001-v1:0
+    const isSonnetTarget =
+      agentId === 'orchestrator_agent' ||
+      agentId === 'researcher_agent' ||
+      agentId === 'agent_1_vision' ||
+      agentId === 'agent_01';
+
+    const defaultTargetModel = isSonnetTarget
+      ? 'anthropic.claude-sonnet-5'
+      : 'anthropic.claude-haiku-4-5-20251001-v1:0';
+
     const rawModelList: (string | undefined)[] = [
       customCredentials?.modelId,
       process.env.BEDROCK_MODEL_ID,
-      'anthropic.claude-sonnet-4-6',
+      defaultTargetModel,
+      isSonnetTarget ? 'anthropic.claude-sonnet-5' : 'anthropic.claude-haiku-4-5-20251001-v1:0',
       customCredentials?.model2Id,
       process.env.BEDROCK_MODEL_2_ID,
-      'anthropic.claude-3-5-sonnet-20241022-v2:0',
+      'anthropic.claude-haiku-4-5-20251001-v1:0',
+      'anthropic.claude-sonnet-5',
     ];
 
     const uniqueBedrockModels = resolveBedrockCandidates(rawModelList, region);
-    const primaryModelId = uniqueBedrockModels[0] || 'anthropic.claude-sonnet-4-6';
+    const primaryModelId = uniqueBedrockModels[0] || defaultTargetModel;
 
     console.log('\n==================== [AI AGENT TASK DISPATCH] ====================');
     console.log(`[Bedrock Dispatch] 🤖 Target Agent: ${agentName || 'Agent'} (${agentId || 'id'})`);
     console.log(`[Bedrock Dispatch] 🕒 Timestamp: ${new Date().toISOString()}`);
-    console.log(`[Bedrock Priority] 🎯 PRIORITY 1: AWS Bedrock Claude Sonnet (EXCLUSIVELY FIRED FIRST)`);
+    console.log(`[Bedrock Priority] 🎯 PRIORITY 1: AWS Bedrock ${isSonnetTarget ? 'Claude Sonnet 5' : 'Claude Haiku 4.5'} (EXCLUSIVELY FIRED FIRST)`);
     console.log(`[Bedrock Config] Prioritized Model Pool: ${uniqueBedrockModels.join(' -> ')}`);
     console.log(`[Bedrock Config] Region: ${region}`);
     console.log(`[Bedrock Config] Access Key ID: ${accessKeyId ? accessKeyId.slice(0, 4) + '...' + accessKeyId.slice(-4) : 'NONE'}`);
@@ -377,7 +389,7 @@ function resolveBedrockCandidates(requestedModels: (string | undefined)[], targe
 
     let bedrockError: any = null;
 
-    // 1. Attempt AWS Bedrock Claude Sonnet (EXCLUSIVELY FIRST - NO PARALLEL GEMINI CALL)
+    // 1. Attempt AWS Bedrock Claude models (EXCLUSIVELY FIRST - NO PARALLEL GEMINI CALL)
     // Only dispatch to Bedrock if credentials strictly conform to AWS IAM key specifications (20 chars / 40 chars)
     const hasValidAwsCredentials = Boolean(
       accessKeyId &&
@@ -424,15 +436,16 @@ function resolveBedrockCandidates(requestedModels: (string | undefined)[], targe
 
           const responseBody = JSON.parse(new TextDecoder().decode(bedrockResponse.body));
           const textOutput = responseBody.content?.[0]?.text || JSON.stringify(responseBody);
+          const modelTitle = isSonnetTarget ? 'Anthropic Claude Sonnet 5' : 'Anthropic Claude Haiku 4.5';
 
-          console.log(`[Bedrock Execution] ✅ AWS BEDROCK CLAUDE SONNET SUCCEEDED with ${modelLabel} in ${duration}ms!`);
+          console.log(`[Bedrock Execution] ✅ AWS BEDROCK SUCCEEDED with ${modelTitle} (${modelLabel}) in ${duration}ms!`);
           console.log(`[Bedrock Execution] Generated output: ${textOutput.length} characters.`);
           console.log('==================================================================\n');
 
           return res.json({
             success: true,
-            engine: 'AWS Bedrock (Claude Sonnet)',
-            modelName: 'Anthropic Claude Sonnet',
+            engine: isSonnetTarget ? 'AWS Bedrock (Claude Sonnet 5)' : 'AWS Bedrock (Claude Haiku 4.5)',
+            modelName: modelTitle,
             modelId: candidateModel,
             provider: `AWS Bedrock (${region})`,
             text: textOutput,
@@ -443,7 +456,7 @@ function resolveBedrockCandidates(requestedModels: (string | undefined)[], targe
         } catch (err: any) {
           bedrockError = err;
           const errName = err.name || 'Error';
-          console.log(`[Bedrock Candidate Check] ${modelLabel} evaluation completed (${errName}). Assessing failover sequence.`);
+          console.log(`[Bedrock Routing Note] ${modelLabel} status (${errName}). Assessing failover sequence.`);
           if (err.name === 'InvalidSignatureException' || err.name === 'AccessDeniedException') {
             console.log(`[Bedrock Diagnostic] IAM policy or credentials evaluation note (${errName}). Engaging automated failover.`);
             break; // Secret key error or access denial affects all Bedrock models
@@ -586,7 +599,7 @@ function resolveBedrockCandidates(requestedModels: (string | undefined)[], targe
     const ui = specInputs?.uiStyling?.join(', ') || 'Tailwind CSS, shadcn/ui';
     const backend = specInputs?.backend || 'Python (FastAPI)';
     const db = specInputs?.database?.join(', ') || 'PostgreSQL 16 + Redis';
-    const aiModels = specInputs?.aiIntegration?.models?.join(' and ') || 'Claude 3.5 Sonnet & GPT-4o Vision';
+    const aiModels = specInputs?.aiIntegration?.models?.join(' and ') || 'Claude Sonnet 5 & Claude Haiku 4.5';
     const agentMode = specInputs?.aiIntegration?.agentMode || 'Multi-Agent';
 
     console.log(`\n🪄 [Auto-Improve Prompt] Analyzing user description (${baseText.length} chars) for "${title}"...`);
@@ -597,7 +610,7 @@ Your task is to take the user's project description and enhance it into a compre
 CRITICAL INSTRUCTION - STRICT PRESERVATION OF CONTEXT:
 1. You MUST read and analyze the EXACT application concept, features, UI interactions, and architecture provided by the user.
 2. PRESERVE 100% of the user's intended domain, unique mechanics, specific features, user interactions, styling tokens, and tech stack choices.
-   For example, if the user describes a fashion rating app with a TikTok/Tinder swipe feed, 0-10 rating sliders, outfit tags (e.g. Casual, Wedding, Clubbing), photo upload modal, Firebase Firestore DB, Cloud Storage, and AWS Bedrock Claude 3.5 Sonnet with GPT-4o vision failover, EVERY SINGLE ONE of these features, tokens, and flows MUST remain central to the enhanced description.
+   For example, if the user describes a fashion rating app with a TikTok/Tinder swipe feed, 0-10 rating sliders, outfit tags (e.g. Casual, Wedding, Clubbing), photo upload modal, Firebase Firestore DB, Cloud Storage, and AWS Bedrock Claude Sonnet 5 with GPT-4o vision failover, EVERY SINGLE ONE of these features, tokens, and flows MUST remain central to the enhanced description.
 3. UNDER NO CIRCUMSTANCES should you substitute or replace the user's concept with a generic template (e.g., DO NOT replace a fashion rating app with an e-commerce shopping cart, contract auditor, or medical clinic).
 4. EXPAND the user's specific idea with rich architectural depth:
    - Core Concept & Product Vision (deepening the user's specific problem statement and core loop).
@@ -855,9 +868,14 @@ Please enhance this exact project into a comprehensive, high-context specificati
     console.log(`[ADK PRD Pipeline] 🚀 Initiating 8-Agent Sequential Execution Graph for: "${productName}"`);
     console.log(`==================================================================`);
 
-    const ORCHESTRATOR_PRIMARY = 'anthropic.claude-sonnet-4-6';
+    const SONNET_PRIMARY = 'anthropic.claude-sonnet-5';
+    const HAIKU_PRIMARY = 'anthropic.claude-haiku-4-5-20251001-v1:0';
+
+    const ORCHESTRATOR_PRIMARY = SONNET_PRIMARY;
     const ORCHESTRATOR_FAILOVER = 'gemini-3.5-pro';
-    const SUB_AGENT_PRIMARY = 'anthropic.claude-3-5-sonnet-20241022-v2:0';
+    const RESEARCHER_PRIMARY = SONNET_PRIMARY;
+    const PRODUCT_OWNER_PRIMARY = SONNET_PRIMARY;
+    const SUB_AGENT_PRIMARY = HAIKU_PRIMARY;
     const SUB_AGENT_FAILOVER = 'gemini-3.5-flash';
 
     // Helper for executing single agent with Bedrock -> Gemini failover
@@ -1051,17 +1069,17 @@ CREATE TABLE AuditLogEntries (
         'researcher_agent',
         researchPrompt,
         `ROLE: Technical & Market Researcher.\nRESPONSIBILITY: Retrieve exact competitor benchmarks, active library versions, and API limits.\nRESTRICTIONS: BANNED TOKENS: "various sources", "etc.", "general information", "item", "data".`,
-        SUB_AGENT_PRIMARY,
+        RESEARCHER_PRIMARY,
         SUB_AGENT_FAILOVER
       );
 
-      // Step 2: Vision & Scope Lead
+      // Step 2: Vision & Scope Lead (Product Owner)
       const visionPrompt = `Product: ${productName}\nContext Dossier:\n${dossier}`;
       const vision = await executeStage(
         'agent_1_vision',
         visionPrompt,
         `ROLE: Vision & Scope Lead.\nRESPONSIBILITY: Transform Context Dossier into a crisp Product Vision.\nRESTRICTIONS: BANNED TOKENS: "generic user", "TBD", "placeholder", "items", "data". Must define at least 2 explicit personas and non-goals.`,
-        SUB_AGENT_PRIMARY,
+        PRODUCT_OWNER_PRIMARY,
         SUB_AGENT_FAILOVER
       );
 

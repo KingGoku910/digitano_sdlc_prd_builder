@@ -99,7 +99,9 @@ export function ExportModal({ isOpen, onClose }: ExportModalProps) {
             </div>
             <div>
               <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <span>Digitano Monorepo Workspace</span>
+                <span className="font-hightech tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-white to-cyan-300">
+                  Digitano Dev-Docs Workspace
+                </span>
                 <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-cyan-950/60 text-cyan-300 border border-cyan-800/50">
                   Ready to Export
                 </span>

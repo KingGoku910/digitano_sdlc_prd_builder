@@ -146,9 +146,9 @@ function synthesizePreservedSpecification(
 
   let resolvedAi = ctx.aiModels;
   if (/bedrock/i.test(userText) && /gpt-4o|chatgpt/i.test(userText)) {
-    resolvedAi = "AWS Bedrock (Claude 3.5 Sonnet) with autonomous fallback to GPT-4o/ChatGPT-5 for vision analysis";
+    resolvedAi = "AWS Bedrock (Claude Sonnet 5) with autonomous fallback to GPT-4o/ChatGPT-5 for vision analysis";
   } else if (/claude/i.test(userText) && /gemini/i.test(userText)) {
-    resolvedAi = "Anthropic Claude 3.5 Sonnet (AWS Bedrock) with Google Gemini failover";
+    resolvedAi = "Anthropic Claude Sonnet 5 (AWS Bedrock) with Google Gemini failover";
   }
 
   // Extract custom styling tokens if present

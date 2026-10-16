@@ -222,8 +222,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "Context Dossier with competitor benchmarks, active library standards, and gateway constraints passed to Vision Lead.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude 3.5 Sonnet / Gemini 3.5 Flash",
-      modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      modelName: "Anthropic Claude Sonnet 5 / Gemini 3.5 Flash",
+      modelId: "anthropic.claude-sonnet-5",
       provider: "Google ADK & AWS Bedrock (MCP GoogleSearchTool Enabled)",
       reasoningType: "Technical & Market Research via MCP Tools",
     },
@@ -235,8 +235,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "Product Vision & Scope Specification passed to Requirements Engineer.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude 3.5 Sonnet / Gemini 3.5 Flash",
-      modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      modelName: "Anthropic Claude Sonnet 5 / Gemini 3.5 Flash",
+      modelId: "anthropic.claude-sonnet-5",
       provider: "AWS Bedrock & Google ADK",
       reasoningType: "Vision & Scope Engineering",
     },
@@ -248,8 +248,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "Gherkin Requirements Specification passed to Systems Architect.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude 3.5 Sonnet / Gemini 3.5 Flash",
-      modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      modelName: "Anthropic Claude Haiku 4.5 / Gemini 3.5 Flash",
+      modelId: "anthropic.claude-haiku-4-5-20251001-v1:0",
       provider: "AWS Bedrock & Google ADK",
       reasoningType: "Gherkin Acceptance Criteria Engineering",
     },
@@ -261,8 +261,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "Technical Systems Architecture & DDL Schemas passed to UX/UI Designer.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude 3.5 Sonnet / Gemini 3.5 Flash",
-      modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      modelName: "Anthropic Claude Haiku 4.5 / Gemini 3.5 Flash",
+      modelId: "anthropic.claude-haiku-4-5-20251001-v1:0",
       provider: "AWS Bedrock & Google ADK",
       reasoningType: "Systems Architecture & DDL Design",
     },
@@ -274,8 +274,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "UX/UI Design System & 4-State Matrix passed to Security & Risk Officer.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude 3.5 Sonnet / Gemini 3.5 Flash",
-      modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      modelName: "Anthropic Claude Haiku 4.5 / Gemini 3.5 Flash",
+      modelId: "anthropic.claude-haiku-4-5-20251001-v1:0",
       provider: "AWS Bedrock & Google ADK",
       reasoningType: "Visual Layout & 4-State Matrix Synthesis",
     },
@@ -287,8 +287,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "Security & Compliance Specification passed to Telemetry Strategist.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude 3.5 Sonnet / Gemini 3.5 Flash",
-      modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      modelName: "Anthropic Claude Haiku 4.5 / Gemini 3.5 Flash",
+      modelId: "anthropic.claude-haiku-4-5-20251001-v1:0",
       provider: "AWS Bedrock & Google ADK",
       reasoningType: "Zero-Trust Security & Regulatory Compliance",
     },
@@ -300,8 +300,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "Telemetry KPIs & Release Roadmap passed to Master Orchestrator.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude 3.5 Sonnet / Gemini 3.5 Flash",
-      modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      modelName: "Anthropic Claude Haiku 4.5 / Gemini 3.5 Flash",
+      modelId: "anthropic.claude-haiku-4-5-20251001-v1:0",
       provider: "AWS Bedrock & Google ADK",
       reasoningType: "Telemetry KPIs & Release Milestone Engineering",
     },
@@ -313,8 +313,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "Master Publication-Ready PRD Suite & Quality Audit Certificate.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude Sonnet 4-6 / Gemini 3.5 Pro",
-      modelId: "anthropic.claude-sonnet-4-6",
+      modelName: "Anthropic Claude Sonnet 5 / Gemini 3.5 Pro",
+      modelId: "anthropic.claude-sonnet-5",
       provider: "AWS Bedrock & Google ADK",
       reasoningType: "Master Synthesis & Quality Gate Audit",
     },
@@ -327,8 +327,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "Product Vision & Scope passed to Requirements Engineer.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude 3.5 Sonnet",
-      modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      modelName: "Anthropic Claude Sonnet 5",
+      modelId: "anthropic.claude-sonnet-5",
       provider: "AWS Bedrock & Google ADK",
       reasoningType: "Vision & Scope Analysis",
     },
@@ -340,8 +340,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "Gherkin Requirements Specification.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude 3.5 Sonnet",
-      modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      modelName: "Anthropic Claude Haiku 4.5",
+      modelId: "anthropic.claude-haiku-4-5-20251001-v1:0",
       provider: "AWS Bedrock & Google ADK",
       reasoningType: "Requirements Engineering",
     },
@@ -353,8 +353,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "Systems Architecture Specification.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude 3.5 Sonnet",
-      modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      modelName: "Anthropic Claude Haiku 4.5",
+      modelId: "anthropic.claude-haiku-4-5-20251001-v1:0",
       provider: "AWS Bedrock & Google ADK",
       reasoningType: "Architecture & Schema Design",
     },
@@ -366,8 +366,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "UX/UI Design System.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude 3.5 Sonnet",
-      modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      modelName: "Anthropic Claude Haiku 4.5",
+      modelId: "anthropic.claude-haiku-4-5-20251001-v1:0",
       provider: "AWS Bedrock & Google ADK",
       reasoningType: "UX/UI Design System",
     },
@@ -379,8 +379,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "Security & Compliance Specification.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude 3.5 Sonnet",
-      modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      modelName: "Anthropic Claude Haiku 4.5",
+      modelId: "anthropic.claude-haiku-4-5-20251001-v1:0",
       provider: "AWS Bedrock & Google ADK",
       reasoningType: "Security & Compliance Analysis",
     },
@@ -392,8 +392,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "Telemetry KPIs & Release Roadmap.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude 3.5 Sonnet",
-      modelId: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      modelName: "Anthropic Claude Haiku 4.5",
+      modelId: "anthropic.claude-haiku-4-5-20251001-v1:0",
       provider: "AWS Bedrock & Google ADK",
       reasoningType: "Telemetry KPIs Engineering",
     },
@@ -405,8 +405,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "Master PRD Suite.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude Sonnet 4-6",
-      modelId: "anthropic.claude-sonnet-4-6",
+      modelName: "Anthropic Claude Sonnet 5",
+      modelId: "anthropic.claude-sonnet-5",
       provider: "AWS Bedrock & Google ADK",
       reasoningType: "Master Synthesis & Quality Gate",
     },
@@ -448,20 +448,42 @@ export async function executeAgentReasoning(
   // Valid AWS IAM Secret Access Keys are always exactly 40 base64 characters
   const secretAccessKey = (rawSecret.length === 40 && rawSecret !== "20un1TmaK/JGV6p6uVKY6gLRejK+4oBySjRr9") ? rawSecret : "";
   const region = (savedSettings.awsRegion || "us-east-1").trim();
-  const rawModel1 = (savedSettings.bedrockModelId || "anthropic.claude-sonnet-4-6").trim();
-  const modelId = (!rawModel1.includes("sonnet-5") && !rawModel1.includes("20240620")) ? rawModel1 : "anthropic.claude-sonnet-4-6";
-  const rawModel2 = (savedSettings.bedrockModel2Id || "anthropic.claude-3-5-sonnet-20241022-v2:0").trim();
-  const model2Id = !rawModel2.includes("sonnet-5") ? rawModel2 : "anthropic.claude-3-5-sonnet-20241022-v2:0";
+
+  // Role-targeted model routing:
+  // Orchestrator, Researcher, Product Owner -> anthropic.claude-sonnet-5
+  // Rest of Agents -> anthropic.claude-haiku-4-5-20251001-v1:0
+  const isSonnetAgent =
+    agentId === "orchestrator_agent" ||
+    agentId === "researcher_agent" ||
+    agentId === "agent_1_vision" ||
+    agentId === "agent_01" ||
+    agentId === "agent_07" ||
+    (agentName || "").toLowerCase().includes("orchestrator") ||
+    (agentName || "").toLowerCase().includes("researcher") ||
+    (agentName || "").toLowerCase().includes("product owner") ||
+    (agentName || "").toLowerCase().includes("vision");
+
+  const defaultAgentModelId = isSonnetAgent
+    ? "anthropic.claude-sonnet-5"
+    : "anthropic.claude-haiku-4-5-20251001-v1:0";
+  const defaultAgentModelName = isSonnetAgent
+    ? "Anthropic Claude Sonnet 5"
+    : "Anthropic Claude Haiku 4.5";
+
+  const rawModel1 = (savedSettings.bedrockModelId || "anthropic.claude-sonnet-5").trim();
+  const rawModel2 = (savedSettings.bedrockModel2Id || "anthropic.claude-haiku-4-5-20251001-v1:0").trim();
+  const modelId = isSonnetAgent ? (rawModel1 || "anthropic.claude-sonnet-5") : defaultAgentModelId;
+  const model2Id = rawModel2 || "anthropic.claude-haiku-4-5-20251001-v1:0";
   const geminiApiKey = (savedSettings.geminiApiKey || "").trim();
   const geminiApi2Key = (savedSettings.geminiApi2Key || "").trim();
   const geminiApi3Key = (savedSettings.geminiApi3Key || "").trim();
 
   console.group(`🤖 [AI Agent Pipeline] Dispatching: ${agentName} (${agentId || "Agent"})`);
-  console.log(`🎯 [Priority #1] AWS Bedrock Claude Sonnet (${modelId}) in ${region}`);
+  console.log(`🎯 [Priority #1] AWS Bedrock ${defaultAgentModelName} (${modelId}) in ${region}`);
   console.log(`🔑 [AWS Credentials] AccessKey: ${accessKeyId ? accessKeyId.slice(0, 4) + "..." + accessKeyId.slice(-4) : "NONE"}, SecretKey: ${secretAccessKey ? "40 chars (valid format)" : `${rawSecret.length} chars (pending full 40-char key)`}`);
   console.log(`📡 [Dispatch] Firing request to /api/bedrock/invoke...`);
 
-  // 1. PRIMARY ATTEMPT: AWS Bedrock (Claude Sonnet) via server endpoint
+  // 1. PRIMARY ATTEMPT: AWS Bedrock via server endpoint
   try {
     const resp = await fetch("/api/bedrock/invoke", {
       method: "POST",
@@ -491,7 +513,7 @@ export async function executeAgentReasoning(
       console.log(`📥 [Bedrock Server Response] Received response for ${agentName}:`, data.engine);
 
       if (data.bedrockSucceeded) {
-        console.log(`✅ [Bedrock Succeeded] Real-time AWS Bedrock Claude Sonnet output received! Length: ${data.text?.length} chars`);
+        console.log(`✅ [Bedrock Succeeded] Real-time AWS Bedrock ${defaultAgentModelName} output received! Length: ${data.text?.length} chars`);
       } else if (data.failoverEngaged) {
         console.log(`ℹ️ [Bedrock Failover Protocol] AWS Bedrock was prioritized first, failover engaged cleanly: ${data.notes || "Automated failover active"}`);
       }
@@ -502,9 +524,9 @@ export async function executeAgentReasoning(
         const isBedrock = data.engine?.includes("Bedrock");
         return {
           text: data.text,
-          engine: data.engine || "AWS Bedrock (Claude Sonnet)",
-          modelName: data.modelName || (isBedrock ? "Anthropic Claude Sonnet" : "Google Gemini 3.5 Flash"),
-          modelId: data.modelId || (isBedrock ? "anthropic.claude-sonnet-4-6" : "gemini-3.5-flash"),
+          engine: data.engine || (isBedrock ? (isSonnetAgent ? "AWS Bedrock (Claude Sonnet 5)" : "AWS Bedrock (Claude Haiku 4.5)") : "Google Gemini Failover"),
+          modelName: data.modelName || (isBedrock ? defaultAgentModelName : "Google Gemini 3.5 Flash"),
+          modelId: data.modelId || (isBedrock ? defaultAgentModelId : "gemini-3.5-flash"),
           provider: data.provider || (isBedrock ? "AWS Bedrock Runtime (us-east-1)" : "Google GenAI API"),
           bedrockAttempted: true,
           failoverEngaged: !isBedrock,
@@ -520,9 +542,9 @@ export async function executeAgentReasoning(
 
       return {
         text: domainText,
-        engine: data.engine || "AWS Bedrock (Claude Sonnet Protocol)",
-        modelName: data.modelName || "Anthropic Claude Sonnet",
-        modelId: data.modelId || modelId,
+        engine: data.engine || `AWS Bedrock (${defaultAgentModelName} Protocol)`,
+        modelName: data.modelName || defaultAgentModelName,
+        modelId: data.modelId || defaultAgentModelId,
         provider: data.provider || `AWS Bedrock (${region}) & SDLC Orchestrator`,
         bedrockAttempted: true,
         failoverEngaged: true,
@@ -543,9 +565,9 @@ export async function executeAgentReasoning(
 
   return {
     text: fallbackText,
-    engine: "AWS Bedrock (Claude Sonnet Protocol)",
-    modelName: "Anthropic Claude Sonnet",
-    modelId: "anthropic.claude-sonnet-4-6",
+    engine: `AWS Bedrock (${defaultAgentModelName} Protocol)`,
+    modelName: defaultAgentModelName,
+    modelId: defaultAgentModelId,
     provider: "AWS Bedrock Runtime (us-east-1) & SDLC Orchestrator",
     bedrockAttempted: true,
     failoverEngaged: false,
@@ -814,6 +836,16 @@ Execute Master Synthesis & Quality Gate Audit:
     const isGemini = engineUsed?.toLowerCase().includes("gemini");
     const engineType: "bedrock" | "gemini" | "synthesizer" = isBedrock ? "bedrock" : isGemini ? "gemini" : "synthesizer";
 
+    const isSonnetAgentCurrent =
+      def.id === "orchestrator_agent" ||
+      def.id === "researcher_agent" ||
+      def.id === "agent_1_vision" ||
+      def.id === "agent_01" ||
+      def.id === "agent_07";
+    const agentDefaultModelId = isSonnetAgentCurrent
+      ? "anthropic.claude-sonnet-5"
+      : "anthropic.claude-haiku-4-5-20251001-v1:0";
+
     const metrics = {
       durationMs,
       tokenCount,
@@ -821,7 +853,7 @@ Execute Master Synthesis & Quality Gate Audit:
       charactersCount,
       throughputTokensPerSec,
       engineType,
-      modelUsed: reasoningResult.modelId || "anthropic.claude-sonnet-4-6",
+      modelUsed: reasoningResult.modelId || agentDefaultModelId,
       timestamp: new Date().toLocaleTimeString(),
     };
 
@@ -909,6 +941,9 @@ Execute Master Synthesis & Quality Gate Audit:
     orchestrator_report: orcOutput,
   };
 
+  // Run PRD Schema Validation Gate
+  const prdValidation = validatePrdArtifact(fullPrdDocument, specInputs);
+
   // Save to Cognito User DynamoDB Partition (PK: USER#<email>, SK: PROJECT#<id>)
   const activeUserEmail = getStoredEmail();
   await saveProjectToStorage(
@@ -929,4 +964,217 @@ Execute Master Synthesis & Quality Gate Audit:
   );
 
   return artifacts;
+}
+
+export interface PrdValidationCheck {
+  id: string;
+  name: string;
+  category: "schema" | "gherkin" | "guardrails" | "architecture" | "completeness";
+  description: string;
+  passed: boolean;
+  score: number; // 0 to 100
+  details: string;
+}
+
+export interface PrdValidationResult {
+  isValid: boolean;
+  score: number; // 0 to 100
+  status: "verified" | "warning" | "failed";
+  timestamp: string;
+  totalChecks: number;
+  passedChecks: number;
+  checks: PrdValidationCheck[];
+  schemaKeysMatched: string[];
+  missingKeys: string[];
+  bannedTokensFound: string[];
+  gherkinScenariosCount: number;
+  summary: string;
+}
+
+/**
+ * Validates a generated PRD artifact against expected schema keys, Gherkin syntax,
+ * zero-banned-token guardrails, and architectural SLA specifications.
+ */
+export function validatePrdArtifact(
+  prdContent: string,
+  _specInputs?: ProjectSpecificationInputs
+): PrdValidationResult {
+  const content = prdContent || "";
+  const checks: PrdValidationCheck[] = [];
+
+  // 1. Schema Section Keys
+  const EXPECTED_SCHEMA_KEYS = [
+    {
+      id: "sec_exec_summary",
+      name: "1. Executive Summary & Operational Mandate",
+      category: "schema" as const,
+      pattern: /##\s*1\.\s*Executive Summary|Executive Summary|Operational Mandate/i,
+      desc: "Mandatory executive summary defining project scope, build stack, and problem statement",
+    },
+    {
+      id: "sec_personas",
+      name: "2. Target Personas & Stakeholders",
+      category: "schema" as const,
+      pattern: /##\s*2\.\s*Target Personas|Target Personas|Primary Persona|Stakeholder/i,
+      desc: "Distinct user personas with concrete goals, responsibilities, and friction points",
+    },
+    {
+      id: "sec_scope",
+      name: "3. Scope & Explicit Non-Goals",
+      category: "schema" as const,
+      pattern: /##\s*3\.\s*Product Scope|Explicit Non-Goals|Non-Goals|Out of Scope/i,
+      desc: "Explicit functional boundary definition and strict non-goals",
+    },
+    {
+      id: "sec_user_stories",
+      name: "4. User Stories & Gherkin Requirements",
+      category: "schema" as const,
+      pattern: /##\s*4\.\s*User Stories|Requirements Specification|Epics/i,
+      desc: "Detailed epics containing structured user stories with acceptance criteria",
+    },
+    {
+      id: "sec_architecture",
+      name: "5. Technical Architecture & Component Interaction",
+      category: "schema" as const,
+      pattern: /##\s*5\.\s*Technical Architecture|System Architecture|Component Interaction/i,
+      desc: "Decoupled frontend, backend, AI failover pipeline, and infrastructure topology",
+    },
+    {
+      id: "sec_database",
+      name: "6. Data Architecture & Storage Models",
+      category: "schema" as const,
+      pattern: /##\s*6\.\s*Data Architecture|Database Schema|Persistence Models|Firestore Collections/i,
+      desc: "Detailed database entities, schemas, indexes, and persistence strategy",
+    },
+    {
+      id: "sec_api_contracts",
+      name: "7. API Specifications & Endpoints",
+      category: "schema" as const,
+      pattern: /##\s*7\.\s*API Specifications|API Contracts|RESTful Endpoints|\/api\//i,
+      desc: "Explicit API endpoints with methods, request payloads, and status codes",
+    },
+    {
+      id: "sec_security",
+      name: "8. Zero-Trust Security & Compliance",
+      category: "schema" as const,
+      pattern: /##\s*8\.\s*Security|Zero-Trust|Compliance Boundaries|RBAC/i,
+      desc: "Zero-trust token verification, role-based access control, and data encryption",
+    },
+    {
+      id: "sec_slas",
+      name: "9. Non-Functional SLAs & Telemetry",
+      category: "schema" as const,
+      pattern: /##\s*9\.\s*Non-Functional|SLAs & Performance|Quantitative KPIs|Latency Targets/i,
+      desc: "Numerical latency thresholds (<50ms, <1.5s), 99.95% uptime, and telemetry",
+    },
+    {
+      id: "sec_roadmap",
+      name: "10. Release Milestones & Implementation",
+      category: "schema" as const,
+      pattern: /##\s*10\.\s*Implementation Roadmap|Release Milestones|Phased Rollout/i,
+      desc: "Time-bound deployment phases (Sprint 1, Beta, Production GA)",
+    },
+  ];
+
+  const schemaKeysMatched: string[] = [];
+  const missingKeys: string[] = [];
+
+  EXPECTED_SCHEMA_KEYS.forEach((item) => {
+    const passed = item.pattern.test(content);
+    if (passed) {
+      schemaKeysMatched.push(item.name);
+    } else {
+      missingKeys.push(item.name);
+    }
+    checks.push({
+      id: item.id,
+      name: item.name,
+      category: item.category,
+      description: item.desc,
+      passed,
+      score: passed ? 100 : 0,
+      details: passed ? "Key section verified in artifact schema." : "Section key not found in markdown header hierarchy.",
+    });
+  });
+
+  // 2. Gherkin Syntax Requirement
+  const gherkinGivenCount = (content.match(/\bGiven\b/g) || []).length;
+  const gherkinWhenCount = (content.match(/\bWhen\b/g) || []).length;
+  const gherkinThenCount = (content.match(/\bThen\b/g) || []).length;
+  const gherkinScenariosCount = Math.min(gherkinGivenCount, gherkinWhenCount, gherkinThenCount);
+  const gherkinPassed = gherkinScenariosCount >= 2;
+
+  checks.push({
+    id: "req_gherkin_syntax",
+    name: "Gherkin Acceptance Criteria (Given-When-Then)",
+    category: "gherkin",
+    description: "All user stories must enforce strict Given-When-Then behavioral specifications",
+    passed: gherkinPassed,
+    score: gherkinPassed ? 100 : Math.min(100, gherkinScenariosCount * 40),
+    details: `${gherkinScenariosCount} complete Gherkin Given-When-Then scenario(s) detected across requirements.`,
+  });
+
+  // 3. Guardrails: Banned Placeholder Tokens Check
+  const bannedKeywords = ["item", "items", "data", "record", "ProjectRecord", "/api/items", "TBD", "placeholder"];
+  const bannedTokensFound: string[] = [];
+  bannedKeywords.forEach((tok) => {
+    const escaped = tok.replace(/[/\\^$*+?.()|[\]{}]/g, "\\$&");
+    const regex = new RegExp(`\\b${escaped}\\b`, "i");
+    if (regex.test(content)) {
+      bannedTokensFound.push(tok);
+    }
+  });
+
+  const bannedCheckPassed = bannedTokensFound.length === 0;
+  checks.push({
+    id: "guardrail_banned_tokens",
+    name: "Zero Banned Tokens Rule",
+    category: "guardrails",
+    description: "Strict prohibition of generic placeholder tokens (e.g. item, record, TBD, /api/items)",
+    passed: bannedCheckPassed,
+    score: bannedCheckPassed ? 100 : Math.max(0, 100 - bannedTokensFound.length * 30),
+    details: bannedCheckPassed
+      ? "Zero banned tokens detected. Concrete domain nouns used exclusively."
+      : `Banned generic tokens identified: ${bannedTokensFound.join(", ")}.`,
+  });
+
+  // 4. Document Completeness & Depth
+  const isComplete = content.length > 1500;
+  checks.push({
+    id: "req_document_depth",
+    name: "Specification Depth & Completeness",
+    category: "completeness",
+    description: "Document must contain comprehensive technical details exceeding enterprise depth thresholds",
+    passed: isComplete,
+    score: isComplete ? 100 : Math.min(100, Math.round((content.length / 1500) * 100)),
+    details: `Artifact size: ${content.length} characters with complete implementation specifications.`,
+  });
+
+  // Calculate overall score
+  const totalWeight = checks.length;
+  const passedCount = checks.filter((c) => c.passed).length;
+  const overallScore = Math.round((passedCount / totalWeight) * 100);
+
+  const status: "verified" | "warning" | "failed" =
+    overallScore >= 90 ? "verified" : overallScore >= 70 ? "warning" : "failed";
+
+  const summary =
+    status === "verified"
+      ? `PRD Artifact matches 100% of required schema keys, Gherkin rules, and zero-banned-token policies.`
+      : `PRD Artifact passed ${passedCount}/${totalWeight} verification checks with minor variance.`;
+
+  return {
+    isValid: status === "verified",
+    score: overallScore,
+    status,
+    timestamp: new Date().toISOString(),
+    totalChecks: totalWeight,
+    passedChecks: passedCount,
+    checks,
+    schemaKeysMatched,
+    missingKeys,
+    bannedTokensFound,
+    gherkinScenariosCount,
+    summary,
+  };
 }

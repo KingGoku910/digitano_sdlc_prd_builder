@@ -6,19 +6,15 @@ import {
   Zap,
   Mic,
   MicOff,
-  Volume2,
   Wand2,
   Layers,
   Database,
-  Server,
-  Palette,
-  Layout,
-  Cpu,
   Check,
   ChevronDown,
   ChevronUp,
   SlidersHorizontal,
   Loader2,
+  Cpu,
 } from "lucide-react";
 import {
   PlatformType,
@@ -31,6 +27,7 @@ import {
   AI_MODELS_CATALOG,
 } from "../../types/projectSpec";
 import { autoImproveProjectDescription } from "../../services/promptImprover";
+import { assessDynamicStack } from "../../services/stackAssessor";
 
 interface ProjectBriefInputProps {
   onSubmit: (prompt: string, title: string, specInputs?: ProjectSpecificationInputs) => void;
@@ -45,9 +42,20 @@ const SAMPLE_BLUEPRINTS = [
     ui: ["Tailwind CSS v4", "shadcn/ui"],
     backend: "Python (FastAPI)",
     dbPreset: "supabase_vector",
-    models: ["claude-3-7-sonnet", "gemini-3.8-flash"],
+    models: ["anthropic.claude-sonnet-5", "gemini-3.8-flash"],
     mode: "Multi-Agent" as AgentModeType,
     description: `Build "AuditPulse AI," an enterprise-grade B2B contract risk auditing platform. Mid-market companies, agencies, and legal teams upload vendor NDAs, MSAs, and client agreements. The system parses document text, identifies high-risk liabilities, missing indemnity protections, and hidden auto-renewal clauses, providing an instant overall risk score (0–100) along with line-by-line redline suggestions.`,
+  },
+  {
+    title: "DripCheck Fashion",
+    type: "Web App" as PlatformType,
+    frontend: "Next.js (App Router)",
+    ui: ["Tailwind CSS v4", "shadcn/ui"],
+    backend: "Python (FastAPI)",
+    dbPreset: "firebase_firestore",
+    models: ["anthropic.claude-sonnet-5", "gemini-3.8-flash"],
+    mode: "Multi-Agent" as AgentModeType,
+    description: `Build "DripCheck", a high-performance fashion rating web application with Next.js 16 (App Router), Tailwind CSS v4, and shadcn/ui. Python FastAPI backend processes uploaded outfit photos, stores media assets in Firebase Firestore DB and Firebase Cloud Storage, and invokes AWS Bedrock Claude Sonnet 5 with Google Gemini failover for 0-10 style scoring.`,
   },
   {
     title: "OmniFleet Logistics HUD",
@@ -56,7 +64,7 @@ const SAMPLE_BLUEPRINTS = [
     ui: ["Tailwind CSS v4", "shadcn/ui"],
     backend: "Python (FastAPI)",
     dbPreset: "dynamo_s3",
-    models: ["gemini-3.5-pro", "claude-3-5-sonnet"],
+    models: ["gemini-3.5-pro", "anthropic.claude-haiku-4-5-20251001-v1:0"],
     mode: "Multi-Agent" as AgentModeType,
     description: `Real-time freight route dispatch HUD tracking truck telemetry, driver duty cycles, and automated cargo temperature alerts with sub-50ms optimistic state updates.`,
   },
@@ -67,26 +75,16 @@ const SAMPLE_BLUEPRINTS = [
     ui: ["Tamagui", "NativeWind (Tailwind)"],
     backend: "Python (FastAPI Serverless)",
     dbPreset: "postgres_redis",
-    models: ["claude-3-5-sonnet", "gpt-4o"],
+    models: ["anthropic.claude-haiku-4-5-20251001-v1:0", "gpt-4o"],
     mode: "Single Agent" as AgentModeType,
     description: `HIPAA-compliant patient portal with appointment booking, encrypted lab report storage, asynchronous doctor messaging, and push notifications for medication reminders.`,
-  },
-  {
-    title: "Fintech Vault Ledger",
-    type: "Web App" as PlatformType,
-    frontend: "Next.js (App Router)",
-    ui: ["Tailwind CSS v4", "shadcn/ui"],
-    backend: "Go (Gin / Fiber)",
-    dbPreset: "postgres_redis",
-    models: ["claude-3-7-sonnet", "deepseek-r1"],
-    mode: "Multi-Agent" as AgentModeType,
-    description: `Double-entry transaction ledger with multi-currency wallets, instant peer-to-peer settlement, fraud anomaly detection, and automated reconciliation reports.`,
   },
 ];
 
 export function ProjectBriefInput({ onSubmit, isLoading = false }: ProjectBriefInputProps) {
-  // Mode toggle: Simple vs Advanced
+  // Mode toggle: Advanced Stack Options expanded vs simple
   const [isAdvancedMode, setIsAdvancedMode] = useState(false);
+  const [hasManualStackOverride, setHasManualStackOverride] = useState(false);
 
   // 1. Project Name
   const [projectName, setProjectName] = useState("");
@@ -94,28 +92,21 @@ export function ProjectBriefInput({ onSubmit, isLoading = false }: ProjectBriefI
   // 2. Project Type
   const [projectType, setProjectType] = useState<PlatformType>("Web App");
 
-  // 3. Frontend
+  // Advanced Stack Options (Dynamically Assessed or Custom)
   const [frontend, setFrontend] = useState<string>("Next.js (App Router)");
-
-  // 4. UI & Styling
   const [uiStyling, setUiStyling] = useState<string[]>(["Tailwind CSS v4", "shadcn/ui"]);
-
-  // 5. Backend
   const [backend, setBackend] = useState<string>("Python (FastAPI)");
-
-  // 6. Database Dependencies
   const [selectedDbPreset, setSelectedDbPreset] = useState<string>("postgres_redis");
   const [customDatabases, setCustomDatabases] = useState<string[]>(["PostgreSQL 16", "Redis (In-Memory)"]);
-
-  // 7. AI Integration
-  const [selectedModels, setSelectedModels] = useState<string[]>(["claude-3-7-sonnet", "gemini-3.8-flash"]);
+  const [selectedModels, setSelectedModels] = useState<string[]>(["anthropic.claude-sonnet-5", "gemini-3.8-flash"]);
   const [selectedManufacturerTab, setSelectedManufacturerTab] = useState<"Google" | "Anthropic" | "OpenAI" | "DeepSeek">("Google");
   const [agentMode, setAgentMode] = useState<AgentModeType>("Multi-Agent");
 
-  // 8. Description & Wand Auto-Improvement
+  // 3. Description & Wand Auto-Improvement
   const [promptText, setPromptText] = useState("");
   const [isImprovingPrompt, setIsImprovingPrompt] = useState(false);
   const [improveSuccessNotice, setImproveSuccessNotice] = useState<string | null>(null);
+  const [dynamicNotice, setDynamicNotice] = useState<string | null>(null);
 
   // Voice Typing
   const [isListening, setIsListening] = useState(false);
@@ -123,32 +114,31 @@ export function ProjectBriefInput({ onSubmit, isLoading = false }: ProjectBriefI
   const [voiceNotice, setVoiceNotice] = useState<string | null>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Update default frontend/backend options when project type changes
+  // DYNAMIC STACK ASSESSMENT:
+  // When user does NOT manually override Advanced Stack options, dynamically assess
+  // the recommended settings depending on the complexity of the app or what is mentioned in the Brief.
   useEffect(() => {
-    const validFrontends = PLATFORM_FRONTEND_OPTIONS[projectType];
-    if (!validFrontends.includes(frontend)) {
-      setFrontend(validFrontends[0]);
-    }
+    if (hasManualStackOverride) return;
+    if (!promptText.trim()) return;
 
-    const validBackends = PLATFORM_BACKEND_OPTIONS[projectType];
-    if (!validBackends.includes(backend)) {
-      setBackend(validBackends[0]);
+    const assessed = assessDynamicStack(promptText, projectType);
+    if (assessed) {
+      if (assessed.projectType !== projectType) {
+        setProjectType(assessed.projectType);
+      }
+      setFrontend(assessed.frontend);
+      setUiStyling(assessed.uiStyling);
+      setBackend(assessed.backend);
+      setCustomDatabases(assessed.database);
+      setSelectedDbPreset(assessed.databasePreset);
+      setSelectedModels(assessed.models);
+      setAgentMode(assessed.agentMode);
+      if (!projectName.trim() && assessed.detectedTitle) {
+        setProjectName(assessed.detectedTitle);
+      }
+      setDynamicNotice(assessed.inferredReason);
     }
-
-    const validUi = PLATFORM_UI_OPTIONS[projectType];
-    setUiStyling((prev) => {
-      const filtered = prev.filter((u) => validUi.includes(u));
-      return filtered.length > 0 ? filtered : [validUi[0]];
-    });
-  }, [projectType]);
-
-  // Update databases when preset changes
-  useEffect(() => {
-    const preset = DATABASE_PRESETS.find((p) => p.id === selectedDbPreset);
-    if (preset) {
-      setCustomDatabases(preset.databases);
-    }
-  }, [selectedDbPreset]);
+  }, [promptText, hasManualStackOverride]);
 
   // Voice Typing setup
   useEffect(() => {
@@ -180,8 +170,11 @@ export function ProjectBriefInput({ onSubmit, isLoading = false }: ProjectBriefI
       };
 
       recognition.onerror = (event: any) => {
-        console.warn("Speech recognition notice:", event.error);
+        console.warn("Speech recognition error:", event.error);
         setIsListening(false);
+        if (event.error === "not-allowed") {
+          setVoiceNotice("Microphone permission denied. Please allow microphone access.");
+        }
       };
 
       recognition.onend = () => {
@@ -190,21 +183,32 @@ export function ProjectBriefInput({ onSubmit, isLoading = false }: ProjectBriefI
 
       recognitionRef.current = recognition;
     }
+
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (_) {}
+      }
+    };
   }, []);
 
   const toggleVoiceTyping = () => {
-    if (!voiceSupported || !recognitionRef.current) {
-      setVoiceNotice("Voice typing is not supported in this browser.");
-      setTimeout(() => setVoiceNotice(null), 3500);
+    if (!voiceSupported) {
+      setVoiceNotice("Voice recognition is not supported in this browser.");
+      setTimeout(() => setVoiceNotice(null), 4000);
       return;
     }
 
     if (isListening) {
-      recognitionRef.current.stop();
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
       setIsListening(false);
     } else {
+      setVoiceNotice(null);
       try {
-        recognitionRef.current.start();
+        recognitionRef.current?.start();
         setIsListening(true);
       } catch (err) {
         console.warn("Could not start speech recognition:", err);
@@ -221,7 +225,6 @@ export function ProjectBriefInput({ onSubmit, isLoading = false }: ProjectBriefI
 
     setIsImprovingPrompt(true);
     try {
-      // If project name is not set, infer from prompt
       let activeTitle = projectName.trim();
       if (!activeTitle) {
         const match = promptText.match(/Build (?:a|an) (?:full-stack )?([a-zA-Z0-9\s-]+?)(?: web application| mobile application| app| platform| system)/i);
@@ -231,51 +234,17 @@ export function ProjectBriefInput({ onSubmit, isLoading = false }: ProjectBriefI
         }
       }
 
-      // Auto-detect and align stack options mentioned in description
-      if (/next\.?js/i.test(promptText)) {
-        setFrontend("Next.js (App Router)");
-      } else if (/react native/i.test(promptText)) {
-        setProjectType("Mobile App");
-        setFrontend("React Native (Expo SDK 52)");
-      } else if (/flutter/i.test(promptText)) {
-        setProjectType("Mobile App");
-        setFrontend("Flutter 3.x (Dart)");
-      }
-
-      if (/tailwind/i.test(promptText) && !uiStyling.includes("Tailwind CSS v4")) {
-        setUiStyling((prev) => Array.from(new Set([...prev, "Tailwind CSS v4"])));
-      }
-      if (/shadcn/i.test(promptText) && !uiStyling.includes("shadcn/ui")) {
-        setUiStyling((prev) => Array.from(new Set([...prev, "shadcn/ui"])));
-      }
-
-      if (/fastapi|python/i.test(promptText)) {
-        setBackend("Python (FastAPI)");
-      }
-
-      if (/firebase|firestore/i.test(promptText)) {
-        setCustomDatabases((prev) => Array.from(new Set([...prev, "Firebase Firestore DB", "Firebase Cloud Storage"])));
-      }
-
-      const detectedModels: string[] = [];
-      if (/claude/i.test(promptText)) {
-        detectedModels.push("claude-3-5-sonnet");
-      }
-      if (/gpt-4o|chatgpt/i.test(promptText)) {
-        detectedModels.push("gpt-4o");
-      }
-      if (detectedModels.length > 0) {
-        setSelectedModels(detectedModels.slice(0, 2));
-      }
+      // Re-run dynamic assessment
+      const assessed = assessDynamicStack(promptText, projectType);
 
       const specState: Partial<ProjectSpecificationInputs> = {
-        projectName: activeTitle,
-        projectType,
-        frontend: /next\.?js/i.test(promptText) ? "Next.js (App Router)" : frontend,
-        uiStyling,
-        backend: /fastapi|python/i.test(promptText) ? "Python (FastAPI)" : backend,
-        database: customDatabases,
-        aiIntegration: { models: detectedModels.length > 0 ? detectedModels.slice(0, 2) : selectedModels, agentMode },
+        projectName: activeTitle || assessed.detectedTitle,
+        projectType: assessed.projectType,
+        frontend: assessed.frontend,
+        uiStyling: assessed.uiStyling,
+        backend: assessed.backend,
+        database: assessed.database,
+        aiIntegration: { models: assessed.models, agentMode: assessed.agentMode },
       };
 
       const enriched = await autoImproveProjectDescription(promptText, specState);
@@ -290,18 +259,19 @@ export function ProjectBriefInput({ onSubmit, isLoading = false }: ProjectBriefI
   };
 
   const handleToggleUiOption = (option: string) => {
+    setHasManualStackOverride(true);
     setUiStyling((prev) =>
       prev.includes(option) ? prev.filter((o) => o !== option) : [...prev, option]
     );
   };
 
   const handleToggleAiModel = (modelId: string) => {
+    setHasManualStackOverride(true);
     setSelectedModels((prev) => {
       if (prev.includes(modelId)) {
         return prev.filter((m) => m !== modelId);
       }
       if (prev.length >= 2) {
-        // Replace secondary
         return [prev[0], modelId];
       }
       return [...prev, modelId];
@@ -315,9 +285,28 @@ export function ProjectBriefInput({ onSubmit, isLoading = false }: ProjectBriefI
     setUiStyling(sample.ui);
     setBackend(sample.backend);
     setSelectedDbPreset(sample.dbPreset);
+    const preset = DATABASE_PRESETS.find((p) => p.id === sample.dbPreset);
+    if (preset) {
+      setCustomDatabases(preset.databases);
+    }
     setSelectedModels(sample.models);
     setAgentMode(sample.mode);
     setPromptText(sample.description);
+    setHasManualStackOverride(true);
+    setDynamicNotice(`Loaded curated blueprint for ${sample.title}`);
+  };
+
+  const handleResetToDynamicAssessment = () => {
+    setHasManualStackOverride(false);
+    const assessed = assessDynamicStack(promptText, projectType);
+    setFrontend(assessed.frontend);
+    setUiStyling(assessed.uiStyling);
+    setBackend(assessed.backend);
+    setCustomDatabases(assessed.database);
+    setSelectedDbPreset(assessed.databasePreset);
+    setSelectedModels(assessed.models);
+    setAgentMode(assessed.agentMode);
+    setDynamicNotice(assessed.inferredReason);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -345,7 +334,6 @@ export function ProjectBriefInput({ onSubmit, isLoading = false }: ProjectBriefI
       description: promptText.trim(),
     };
 
-    // Construct enriched unified prompt to send to agents
     const unifiedPrompt = `Project Name: ${finalTitle}
 Project Type: ${projectType}
 Build Stack:
@@ -362,30 +350,18 @@ ${promptText.trim()}`;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header & Mode Switcher */}
+      {/* Header & Badges */}
       <div className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-800/40 text-xs font-mono text-cyan-300">
-              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-              <span>AI Engine — Step 1: Project Architecture Specification</span>
-            </div>
-
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-950/60 border border-purple-800/40 text-[11px] font-mono text-purple-300">
-              <Zap className="w-3 h-3 text-purple-400" />
-              <span>Google ADK + AWS Bedrock</span>
-            </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-800/40 text-xs font-mono text-cyan-300">
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+            <span>AI Engine — Step 1: Project Architecture Specification</span>
           </div>
 
-          {/* Simple vs Advanced Mode Toggle */}
-          <button
-            type="button"
-            onClick={() => setIsAdvancedMode(!isAdvancedMode)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#131924] hover:bg-[#1E293B] border border-[#1E293B] text-xs font-medium text-slate-300 transition-colors cursor-pointer"
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-400" />
-            <span>{isAdvancedMode ? "Switch to Simple View" : "Advanced Stack Options"}</span>
-          </button>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-950/60 border border-purple-800/40 text-[11px] font-mono text-purple-300">
+            <Zap className="w-3 h-3 text-purple-400" />
+            <span>Google ADK + AWS Bedrock</span>
+          </div>
         </div>
 
         <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
@@ -434,7 +410,16 @@ ${promptText.trim()}`;
             <div className="relative">
               <select
                 value={projectType}
-                onChange={(e) => setProjectType(e.target.value as PlatformType)}
+                onChange={(e) => {
+                  const newType = e.target.value as PlatformType;
+                  setProjectType(newType);
+                  if (!hasManualStackOverride) {
+                    const assessed = assessDynamicStack(promptText, newType);
+                    setFrontend(assessed.frontend);
+                    setUiStyling(assessed.uiStyling);
+                    setBackend(assessed.backend);
+                  }
+                }}
                 className="w-full px-3.5 py-2.5 bg-[#131924] border border-[#1E293B] rounded-xl text-sm font-medium text-white focus:outline-none focus:border-[#06B6D4] focus:ring-1 focus:ring-[#06B6D4] transition-all cursor-pointer"
               >
                 <option value="Web App">Web App</option>
@@ -445,253 +430,18 @@ ${promptText.trim()}`;
           </div>
         </div>
 
-        {/* ADVANCED STACK BUILD SELECTION (Collapsible or always visible in advanced mode) */}
-        <div className={`space-y-4 rounded-2xl bg-[#0B0F17] border border-[#1E293B] p-4 transition-all ${isAdvancedMode ? "block" : "hidden sm:block"}`}>
-          <div className="flex items-center justify-between pb-2 border-b border-[#1E293B]">
-            <div className="flex items-center gap-2">
-              <Layers className="w-4 h-4 text-cyan-400" />
-              <span className="text-xs font-mono font-semibold uppercase tracking-wider text-slate-300">
-                Build Stack &amp; Architecture Configuration ({projectType})
-              </span>
-            </div>
-            <span className="text-[11px] text-slate-400">
-              Adapts dynamically to {projectType}
-            </span>
-          </div>
-
-          {/* 3. FRONTEND FRAMEWORK (Radio Buttons) */}
-          <div>
-            <label className="block text-xs font-medium text-slate-400 mb-2 font-mono">
-              3. PROJECT FRONTEND (PLATFORM: {projectType.toUpperCase()})
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-              {PLATFORM_FRONTEND_OPTIONS[projectType].map((option) => (
-                <label
-                  key={option}
-                  className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs cursor-pointer transition-all ${
-                    frontend === option
-                      ? "bg-cyan-500/15 border-cyan-500/50 text-cyan-300 font-semibold shadow-sm"
-                      : "bg-[#131924] border-[#1E293B] text-slate-300 hover:text-white hover:bg-[#1E293B]"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="frontend-option"
-                    value={option}
-                    checked={frontend === option}
-                    onChange={() => setFrontend(option)}
-                    className="accent-cyan-400 sr-only"
-                  />
-                  <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
-                    frontend === option ? "border-cyan-400 bg-cyan-400" : "border-slate-600"
-                  }`}>
-                    {frontend === option && <span className="w-1.5 h-1.5 rounded-full bg-black" />}
-                  </span>
-                  <span className="truncate">{option}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* 4. UI & STYLING (Checkboxes) */}
-          <div>
-            <label className="block text-xs font-medium text-slate-400 mb-2 font-mono">
-              4. PROJECT UI &amp; STYLING LIBRARIES (MULTIPLE SELECTIONS)
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
-              {PLATFORM_UI_OPTIONS[projectType].map((uiOpt) => {
-                const isSelected = uiStyling.includes(uiOpt);
-                return (
-                  <button
-                    key={uiOpt}
-                    type="button"
-                    onClick={() => handleToggleUiOption(uiOpt)}
-                    className={`flex items-center justify-between p-2 rounded-xl border text-xs transition-all cursor-pointer ${
-                      isSelected
-                        ? "bg-purple-500/15 border-purple-500/50 text-purple-300 font-semibold shadow-sm"
-                        : "bg-[#131924] border-[#1E293B] text-slate-400 hover:text-white"
-                    }`}
-                  >
-                    <span className="truncate">{uiOpt}</span>
-                    {isSelected && <Check className="w-3.5 h-3.5 text-purple-400 shrink-0 ml-1" />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* 5. BACKEND (Radio Buttons) */}
-          <div>
-            <label className="block text-xs font-medium text-slate-400 mb-2 font-mono">
-              5. PROJECT BACKEND RUNTIME
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {PLATFORM_BACKEND_OPTIONS[projectType].map((backendOpt) => (
-                <label
-                  key={backendOpt}
-                  className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs cursor-pointer transition-all ${
-                    backend === backendOpt
-                      ? "bg-cyan-500/15 border-cyan-500/50 text-cyan-300 font-semibold shadow-sm"
-                      : "bg-[#131924] border-[#1E293B] text-slate-300 hover:text-white hover:bg-[#1E293B]"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="backend-option"
-                    value={backendOpt}
-                    checked={backend === backendOpt}
-                    onChange={() => setBackend(backendOpt)}
-                    className="accent-cyan-400 sr-only"
-                  />
-                  <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
-                    backend === backendOpt ? "border-cyan-400 bg-cyan-400" : "border-slate-600"
-                  }`}>
-                    {backend === backendOpt && <span className="w-1.5 h-1.5 rounded-full bg-black" />}
-                  </span>
-                  <span className="truncate">{backendOpt}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* 6. DATABASE DEPENDENCIES */}
-          <div>
-            <label className="block text-xs font-medium text-slate-400 mb-2 font-mono flex items-center justify-between">
-              <span>6. PROJECT DATABASE DEPENDENCIES (SQL / NOSQL / VECTOR)</span>
-              <span className="text-[11px] text-cyan-400">Curated Presets</span>
-            </label>
-            <select
-              value={selectedDbPreset}
-              onChange={(e) => setSelectedDbPreset(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-[#131924] border border-[#1E293B] rounded-xl text-xs font-medium text-white focus:outline-none focus:border-[#06B6D4] transition-all cursor-pointer mb-2"
-            >
-              {DATABASE_PRESETS.map((preset) => (
-                <option key={preset.id} value={preset.id} className="bg-[#0B0F17] text-slate-200">
-                  {preset.name}
-                </option>
-              ))}
-            </select>
-
-            {/* Selected Database Tags */}
-            <div className="flex flex-wrap gap-1.5">
-              {customDatabases.map((dbName) => (
-                <span
-                  key={dbName}
-                  className="px-2.5 py-1 rounded-lg bg-[#131924] border border-cyan-800/40 text-[11px] font-mono text-cyan-300 flex items-center gap-1"
-                >
-                  <Database className="w-3 h-3 text-cyan-400" />
-                  <span>{dbName}</span>
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* 7. AI INTEGRATION */}
-          <div className="space-y-3 pt-1">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <label className="block text-xs font-medium text-slate-400 font-mono">
-                7. PROJECT AI INTEGRATION (SELECT UP TO 2 MODELS: PRIMARY &amp; SECONDARY)
-              </label>
-
-              {/* Agent Mode Radio */}
-              <div className="flex items-center gap-2 p-1 rounded-xl bg-[#131924] border border-[#1E293B]">
-                {(["No AI agent", "Single Agent", "Multi-Agent"] as AgentModeType[]).map((mode) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    onClick={() => setAgentMode(mode)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer ${
-                      agentMode === mode
-                        ? "bg-purple-500/25 text-purple-300 border border-purple-500/40"
-                        : "text-slate-400 hover:text-white"
-                    }`}
-                  >
-                    {mode}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Manufacturer Filter Tabs */}
-            <div className="flex items-center gap-1 p-1 bg-[#131924] rounded-xl border border-[#1E293B] max-w-md">
-              {(["Google", "Anthropic", "OpenAI", "DeepSeek"] as const).map((manuf) => (
-                <button
-                  key={manuf}
-                  type="button"
-                  onClick={() => setSelectedManufacturerTab(manuf)}
-                  className={`flex-1 py-1 text-center text-xs font-medium rounded-lg transition-colors cursor-pointer ${
-                    selectedManufacturerTab === manuf
-                      ? "bg-cyan-500/20 text-cyan-300 font-semibold"
-                      : "text-slate-400 hover:text-white"
-                  }`}
-                >
-                  {manuf}
-                </button>
-              ))}
-            </div>
-
-            {/* Models Catalog for Selected Manufacturer */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-              {AI_MODELS_CATALOG.filter((m) => m.manufacturer === selectedManufacturerTab).map((model) => {
-                const isSelected = selectedModels.includes(model.id);
-                const isPrimary = selectedModels[0] === model.id;
-                const isSecondary = selectedModels[1] === model.id;
-
-                return (
-                  <button
-                    key={model.id}
-                    type="button"
-                    onClick={() => handleToggleAiModel(model.id)}
-                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between ${
-                      isSelected
-                        ? "bg-cyan-500/15 border-cyan-500/50 text-white shadow-sm"
-                        : "bg-[#131924] border-[#1E293B] text-slate-300 hover:bg-[#1E293B]"
-                    }`}
-                  >
-                    <div className="space-y-0.5">
-                      <div className="text-xs font-semibold flex items-center gap-1.5">
-                        <span>{model.name}</span>
-                        {isPrimary && (
-                          <span className="px-1.5 py-0.2 rounded text-[9px] bg-cyan-950 text-cyan-300 font-mono border border-cyan-800">
-                            Primary
-                          </span>
-                        )}
-                        {isSecondary && (
-                          <span className="px-1.5 py-0.2 rounded text-[9px] bg-purple-950 text-purple-300 font-mono border border-purple-800">
-                            Failover
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[10px] text-slate-400 font-mono">
-                        {model.badge}
-                      </span>
-                    </div>
-
-                    <span className={`w-4 h-4 rounded-md border flex items-center justify-center shrink-0 ${
-                      isSelected ? "bg-cyan-400 border-cyan-400 text-black" : "border-slate-600"
-                    }`}>
-                      {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* 8. PROJECT DESCRIPTION & SPECIFICATIONS + WAND BUTTON & VOICE TYPING */}
-        <div>
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+        {/* 3. PROJECT DESCRIPTION & SPECIFICATIONS (Numbered 3 as requested) */}
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <label
               htmlFor="project-description-textarea"
               className="block text-xs font-medium text-slate-400 font-mono"
             >
-              8. PROJECT DESCRIPTION &amp; SPECIFICATIONS
+              3. PROJECT DESCRIPTION &amp; SPECIFICATIONS
             </label>
 
             {/* Action Bar: Wand Auto-Improve + Voice Typing */}
             <div className="flex items-center gap-2">
-              {/* WAND AUTO-IMPROVE BUTTON */}
               <button
                 type="button"
                 onClick={handleAutoImprove}
@@ -712,7 +462,6 @@ ${promptText.trim()}`;
                 )}
               </button>
 
-              {/* VOICE TYPING BUTTON */}
               <button
                 type="button"
                 onClick={toggleVoiceTyping}
@@ -737,6 +486,333 @@ ${promptText.trim()}`;
             </div>
           </div>
 
+          {/* ADVANCED STACK OPTIONS: Positioned under Auto Improve & Voice Typing */}
+          <div className="space-y-3 pt-1">
+            <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-[#0B0F17] border border-[#1E293B]">
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-cyan-400" />
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-semibold text-slate-200">
+                    System Build Stack
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950 text-cyan-300 border border-cyan-800/60 flex items-center gap-1">
+                    <Zap className="w-2.5 h-2.5 text-amber-400" />
+                    <span>{hasManualStackOverride ? "Manual Customization" : "Dynamic Problem Assessment"}</span>
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsAdvancedMode(!isAdvancedMode)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#131924] hover:bg-[#1E293B] border border-cyan-800/40 text-xs font-medium text-cyan-300 transition-colors cursor-pointer"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-400" />
+                <span>{isAdvancedMode ? "Close Advanced Options" : "Advanced Stack Options"}</span>
+                {isAdvancedMode ? <ChevronUp className="w-3.5 h-3.5 ml-0.5" /> : <ChevronDown className="w-3.5 h-3.5 ml-0.5" />}
+              </button>
+            </div>
+
+            {/* DYNAMIC STACK ASSESSMENT SUMMARY (Visible when not actively in advanced editor) */}
+            {!isAdvancedMode && (
+              <div className="p-3.5 rounded-xl bg-[#0B0F17]/90 border border-cyan-900/40 space-y-2.5 shadow-inner">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[11px] font-mono text-cyan-400 flex items-center gap-1.5 font-semibold">
+                    <Cpu className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Recommended Architecture for this Project:</span>
+                  </span>
+                  {hasManualStackOverride && (
+                    <button
+                      type="button"
+                      onClick={handleResetToDynamicAssessment}
+                      className="text-[10px] font-mono text-cyan-400 hover:underline cursor-pointer"
+                    >
+                      Reset to Dynamic Assessment
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 text-[11px] font-mono">
+                  <span className="px-2.5 py-1 rounded-lg bg-[#131924] border border-[#1E293B] text-cyan-300">
+                    Frontend: <strong className="text-white">{frontend}</strong>
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-[#131924] border border-[#1E293B] text-purple-300">
+                    UI: <strong className="text-white">{uiStyling.join(" + ")}</strong>
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-[#131924] border border-[#1E293B] text-blue-300">
+                    Backend: <strong className="text-white">{backend}</strong>
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-[#131924] border border-[#1E293B] text-emerald-300">
+                    DB: <strong className="text-white">{customDatabases.join(", ")}</strong>
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-[#131924] border border-[#1E293B] text-rose-300">
+                    AI Engine: <strong className="text-white">{selectedModels.join(" ➔ ")} ({agentMode})</strong>
+                  </span>
+                </div>
+
+                {dynamicNotice && (
+                  <p className="text-[11px] text-slate-400 italic">
+                    ⚡ {dynamicNotice}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* EXPANDABLE ADVANCED STACK BUILD SELECTION CONTROLS */}
+            {isAdvancedMode && (
+              <div className="space-y-4 rounded-2xl bg-[#0B0F17] border border-cyan-800/40 p-4 transition-all animate-in fade-in">
+                <div className="flex items-center justify-between pb-2 border-b border-[#1E293B]">
+                  <div className="flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-cyan-400" />
+                    <span className="text-xs font-mono font-semibold uppercase tracking-wider text-slate-300">
+                      Customize Architecture Stack ({projectType})
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleResetToDynamicAssessment}
+                    className="text-[11px] font-mono text-cyan-400 hover:underline cursor-pointer"
+                  >
+                    Auto-tune to Brief
+                  </button>
+                </div>
+
+                {/* 3a. FRONTEND FRAMEWORK */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-2 font-mono">
+                    FRONTEND FRAMEWORK (PLATFORM: {projectType.toUpperCase()})
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+                    {PLATFORM_FRONTEND_OPTIONS[projectType].map((option) => (
+                      <label
+                        key={option}
+                        className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs cursor-pointer transition-all ${
+                          frontend === option
+                            ? "bg-cyan-500/15 border-cyan-500/50 text-cyan-300 font-semibold shadow-sm"
+                            : "bg-[#131924] border-[#1E293B] text-slate-300 hover:text-white hover:bg-[#1E293B]"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="frontend-option"
+                          value={option}
+                          checked={frontend === option}
+                          onChange={() => {
+                            setFrontend(option);
+                            setHasManualStackOverride(true);
+                          }}
+                          className="accent-cyan-400 sr-only"
+                        />
+                        <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
+                          frontend === option ? "border-cyan-400 bg-cyan-400" : "border-slate-600"
+                        }`}>
+                          {frontend === option && <span className="w-1.5 h-1.5 rounded-full bg-black" />}
+                        </span>
+                        <span className="truncate">{option}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3b. UI & STYLING */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-2 font-mono">
+                    UI &amp; STYLING LIBRARIES (MULTIPLE SELECTIONS)
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                    {PLATFORM_UI_OPTIONS[projectType].map((uiOpt) => {
+                      const isSelected = uiStyling.includes(uiOpt);
+                      return (
+                        <button
+                          key={uiOpt}
+                          type="button"
+                          onClick={() => handleToggleUiOption(uiOpt)}
+                          className={`flex items-center justify-between p-2 rounded-xl border text-xs transition-all cursor-pointer ${
+                            isSelected
+                              ? "bg-purple-500/15 border-purple-500/50 text-purple-300 font-semibold shadow-sm"
+                              : "bg-[#131924] border-[#1E293B] text-slate-400 hover:text-white"
+                          }`}
+                        >
+                          <span className="truncate">{uiOpt}</span>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-purple-400 shrink-0 ml-1" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 3c. BACKEND */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-2 font-mono">
+                    BACKEND RUNTIME
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {PLATFORM_BACKEND_OPTIONS[projectType].map((backendOpt) => (
+                      <label
+                        key={backendOpt}
+                        className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs cursor-pointer transition-all ${
+                          backend === backendOpt
+                            ? "bg-cyan-500/15 border-cyan-500/50 text-cyan-300 font-semibold shadow-sm"
+                            : "bg-[#131924] border-[#1E293B] text-slate-300 hover:text-white hover:bg-[#1E293B]"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="backend-option"
+                          value={backendOpt}
+                          checked={backend === backendOpt}
+                          onChange={() => {
+                            setBackend(backendOpt);
+                            setHasManualStackOverride(true);
+                          }}
+                          className="accent-cyan-400 sr-only"
+                        />
+                        <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
+                          backend === backendOpt ? "border-cyan-400 bg-cyan-400" : "border-slate-600"
+                        }`}>
+                          {backend === backendOpt && <span className="w-1.5 h-1.5 rounded-full bg-black" />}
+                        </span>
+                        <span className="truncate">{backendOpt}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3d. DATABASE DEPENDENCIES */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-2 font-mono flex items-center justify-between">
+                    <span>DATABASE DEPENDENCIES (SQL / NOSQL / VECTOR)</span>
+                    <span className="text-[11px] text-cyan-400">Curated Presets</span>
+                  </label>
+                  <select
+                    value={selectedDbPreset}
+                    onChange={(e) => {
+                      const newPresetId = e.target.value;
+                      setSelectedDbPreset(newPresetId);
+                      setHasManualStackOverride(true);
+                      const preset = DATABASE_PRESETS.find((p) => p.id === newPresetId);
+                      if (preset) {
+                        setCustomDatabases(preset.databases);
+                      }
+                    }}
+                    className="w-full px-3.5 py-2.5 bg-[#131924] border border-[#1E293B] rounded-xl text-xs font-medium text-white focus:outline-none focus:border-[#06B6D4] transition-all cursor-pointer mb-2"
+                  >
+                    {DATABASE_PRESETS.map((preset) => (
+                      <option key={preset.id} value={preset.id} className="bg-[#0B0F17] text-slate-200">
+                        {preset.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {customDatabases.map((dbName) => (
+                      <span
+                        key={dbName}
+                        className="px-2.5 py-1 rounded-lg bg-[#131924] border border-cyan-800/40 text-[11px] font-mono text-cyan-300 flex items-center gap-1"
+                      >
+                        <Database className="w-3 h-3 text-cyan-400" />
+                        <span>{dbName}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3e. AI INTEGRATION */}
+                <div className="space-y-3 pt-1">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <label className="block text-xs font-medium text-slate-400 font-mono">
+                      AI INTEGRATION (PRIMARY &amp; FAILOVER)
+                    </label>
+
+                    <div className="flex items-center gap-2 p-1 rounded-xl bg-[#131924] border border-[#1E293B]">
+                      {(["No AI agent", "Single Agent", "Multi-Agent"] as AgentModeType[]).map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => {
+                            setAgentMode(mode);
+                            setHasManualStackOverride(true);
+                          }}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer ${
+                            agentMode === mode
+                              ? "bg-purple-500/25 text-purple-300 border border-purple-500/40"
+                              : "text-slate-400 hover:text-white"
+                          }`}
+                        >
+                          {mode}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1 p-1 bg-[#131924] rounded-xl border border-[#1E293B] max-w-md">
+                    {(["Google", "Anthropic", "OpenAI", "DeepSeek"] as const).map((manuf) => (
+                      <button
+                        key={manuf}
+                        type="button"
+                        onClick={() => setSelectedManufacturerTab(manuf)}
+                        className={`flex-1 py-1 text-center text-xs font-medium rounded-lg transition-colors cursor-pointer ${
+                          selectedManufacturerTab === manuf
+                            ? "bg-cyan-500/20 text-cyan-300 font-semibold"
+                            : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        {manuf}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {AI_MODELS_CATALOG.filter((m) => m.manufacturer === selectedManufacturerTab).map((model) => {
+                      const isSelected = selectedModels.includes(model.id);
+                      const isPrimary = selectedModels[0] === model.id;
+                      const isSecondary = selectedModels[1] === model.id;
+
+                      return (
+                        <button
+                          key={model.id}
+                          type="button"
+                          onClick={() => handleToggleAiModel(model.id)}
+                          className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between ${
+                            isSelected
+                              ? "bg-cyan-500/15 border-cyan-500/50 text-white shadow-sm"
+                              : "bg-[#131924] border-[#1E293B] text-slate-300 hover:bg-[#1E293B]"
+                          }`}
+                        >
+                          <div className="space-y-0.5">
+                            <div className="text-xs font-semibold flex items-center gap-1.5">
+                              <span>{model.name}</span>
+                              {isPrimary && (
+                                <span className="px-1.5 py-0.2 rounded text-[9px] bg-cyan-950 text-cyan-300 font-mono border border-cyan-800">
+                                  Primary
+                                </span>
+                              )}
+                              {isSecondary && (
+                                <span className="px-1.5 py-0.2 rounded text-[9px] bg-purple-950 text-purple-300 font-mono border border-purple-800">
+                                  Failover
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              {model.badge}
+                            </span>
+                          </div>
+
+                          <span className={`w-4 h-4 rounded-md border flex items-center justify-center shrink-0 ${
+                            isSelected ? "bg-cyan-400 border-cyan-400 text-black" : "border-slate-600"
+                          }`}>
+                            {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Textarea container */}
           <div className={`relative rounded-2xl bg-[#131924] border transition-all overflow-hidden p-1 ${
             isListening ? "border-rose-500/60 ring-2 ring-rose-500/20" : "border-[#1E293B] focus-within:border-[#06B6D4]"
           }`}>

@@ -106,10 +106,13 @@ export function Sidebar({
 
             {!isCollapsed && (
               <div className="overflow-hidden whitespace-nowrap">
-                <div className="text-base font-bold text-white tracking-tight flex items-center gap-1.5 leading-none">
-                  <span>Digitano</span>
+                <div className="font-hightech text-sm font-extrabold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-200 to-cyan-400 flex items-center gap-1 leading-none drop-shadow-[0_0_10px_rgba(6,182,212,0.4)]">
+                  <span>DIGITANO</span>
                 </div>
-                <div className="text-[11px] text-cyan-400 font-medium mt-0.5 leading-none">Builder</div>
+                <div className="font-hightech text-[10px] text-cyan-400 font-bold tracking-widest mt-1 uppercase flex items-center gap-1 leading-none">
+                  <span>DEV-DOCS</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_6px_rgba(6,182,212,0.8)]" />
+                </div>
               </div>
             )}
           </div>

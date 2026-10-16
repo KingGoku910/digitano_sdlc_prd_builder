@@ -16,8 +16,8 @@ logging.basicConfig(level=logging.INFO)
 
 # Prioritized Bedrock Claude Sonnet Models Pool
 DEFAULT_BEDROCK_MODELS = [
-    "anthropic.claude-sonnet-4-6",
-    "anthropic.claude-3-5-sonnet-20241022-v2:0",
+    "anthropic.claude-sonnet-5",
+    "anthropic.claude-haiku-4-5-20251001-v1:0",
 ]
 
 # Google Gemini Flash Models (3.5 or newer)
@@ -32,8 +32,8 @@ class CredentialsModel(BaseModel):
     region: Optional[str] = "us-east-1"
     accessKeyId: Optional[str] = None
     secretAccessKey: Optional[str] = None
-    modelId: Optional[str] = "anthropic.claude-sonnet-4-6"
-    model2Id: Optional[str] = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+    modelId: Optional[str] = "anthropic.claude-sonnet-5"
+    model2Id: Optional[str] = "anthropic.claude-haiku-4-5-20251001-v1:0"
     geminiApiKey: Optional[str] = None
     geminiApi2Key: Optional[str] = None
     geminiApi3Key: Optional[str] = None
@@ -132,7 +132,7 @@ def invoke_gemini_fallback(
                 ],
                 "generationConfig": {
                     "temperature": 0.2,
-                    "maxOutputTokens": 3000,
+                    "maxOutputTokens": 32,768,
                 }
             }
 
@@ -195,10 +195,10 @@ def execute_agent_task(req: InvokeRequest) -> InvokeResponse:
             if geo_prefix != "us.":
                 unique_models.append(f"us.{m}")
             unique_models.append(m)
-    unique_models.append("anthropic.claude-3-sonnet-20240229-v1:0")
-    unique_models.append("anthropic.claude-3-haiku-20240307-v1:0")
+    unique_models.append("anthropic.claude-sonnet-5")
+    unique_models.append("anthropic.claude-haiku-4-5-20251001-v1:0")
     unique_models = list(dict.fromkeys(unique_models))
-    primary_model = unique_models[0] if unique_models else "anthropic.claude-sonnet-4-6"
+    primary_model = unique_models[0] if unique_models else "anthropic.claude-haiku-4-5-20251001-v1:0"
 
     # Step 1: AWS Bedrock Claude Sonnet Attempt (if valid credentials provided)
     if access_key and secret_key and len(secret_key) == 40:

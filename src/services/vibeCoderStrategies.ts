@@ -68,7 +68,7 @@ export const STRATEGY_DEFINITIONS: StrategyDefinition[] = [
     badge: "Enterprise",
     category: "Foundational",
     description: "Deep persona instruction embodying a Principal Staff Architect enforcing Stripe/Vercel standards.",
-    recommendedFor: "Claude 3.7 Sonnet, ChatGPT 4.5, Cursor Composer",
+    recommendedFor: "Claude Sonnet 5, ChatGPT 4.5, Cursor Composer",
   },
   {
     id: "promptchain",
@@ -92,7 +92,7 @@ export const STRATEGY_DEFINITIONS: StrategyDefinition[] = [
     badge: "Deep Reasoning",
     category: "Reasoning",
     description: "Forces AI to step through data flow, state graphs, and race conditions before writing code.",
-    recommendedFor: "o3-mini, DeepSeek-R1, Claude 3.7 Thinking",
+    recommendedFor: "o3-mini, DeepSeek-R1, Claude Sonnet 5",
   },
   {
     id: "tot",
@@ -184,7 +184,7 @@ export const VIBE_PLATFORMS: VibePlatformLink[] = [
   {
     id: "claude_code",
     name: "Claude Code CLI",
-    tagline: "Anthropic's autonomous terminal coding tool powered by Claude 3.7 Sonnet",
+    tagline: "Anthropic's autonomous terminal coding tool powered by Claude Sonnet 5",
     urlTemplate: (prompt) => `https://claude.ai/code?prompt=${encodeURIComponent(prompt)}`,
     gradient: "from-amber-600 via-orange-600 to-red-600",
     badge: "Autonomous CLI Agent",
@@ -193,7 +193,7 @@ export const VIBE_PLATFORMS: VibePlatformLink[] = [
   {
     id: "lovable",
     name: "Lovable.dev",
-    tagline: "Full-Stack GPT-4o / Claude 3.7 builder with Supabase & GitHub sync",
+    tagline: "Full-Stack GPT-4o / Claude Sonnet 5 builder with Supabase & GitHub sync",
     urlTemplate: (prompt) => `https://lovable.dev/?prompt=${encodeURIComponent(prompt)}`,
     gradient: "from-pink-500 via-rose-500 to-red-500",
     badge: "Full-Stack + Supabase",
@@ -327,7 +327,7 @@ REQUIREMENTS:
         {
           id: "vibe_01",
           title: `Staff Frontend Architect Persona: ${cleanTitle}`,
-          target: "Cursor Composer / Claude 3.7",
+          target: "Cursor Composer / Claude Sonnet 5",
           strategy: "role",
           content: sanitizeAndFormatMarkdown(`You are a Principal Frontend Architect at Stripe and Vercel. You are tasked with delivering the user interface for: "${cleanTitle}".
 Brief: "${brief}"
@@ -502,7 +502,7 @@ Configure full-stack integration, proxy rules, and environment variables to laun
         {
           id: "vibe_01",
           title: `Chain-of-Thought Architectural Derivation: ${cleanTitle}`,
-          target: "Claude 3.7 / o3-mini / Cursor",
+          target: "Claude Sonnet 5 / o3-mini / Cursor",
           strategy: "cot",
           content: sanitizeAndFormatMarkdown(`THINK STEP-BY-STEP before writing a single line of code for "${cleanTitle}".
 
@@ -535,7 +535,7 @@ STEP 3: CODE IMPLEMENTATION
         {
           id: "vibe_01",
           title: `Tree-of-Thoughts Architecture Exploration: ${cleanTitle}`,
-          target: "Cursor / Claude 3.7",
+          target: "Cursor / Claude Sonnet 5",
           strategy: "tot",
           content: sanitizeAndFormatMarkdown(`Explore 3 distinct architectural branches for implementing "${cleanTitle}" (${brief}):
 
@@ -580,7 +580,7 @@ STEP 3 (REFACTOR): Clean up abstractions, add TypeScript strict types, and optim
         {
           id: "vibe_01",
           title: `Meta-Prompting Self-Refining Code Pipeline: ${cleanTitle}`,
-          target: "Claude 3.7 / Cursor Composer",
+          target: "Claude Sonnet 5 / Cursor Composer",
           strategy: "metaprompt",
           content: sanitizeAndFormatMarkdown(`You will act as both Developer and Senior Staff Code Reviewer for "${cleanTitle}".
 
@@ -627,7 +627,7 @@ Output each layer in dedicated, self-contained files.`),
         {
           id: "vibe_01",
           title: `Socratic Requirement Hardening: ${cleanTitle}`,
-          target: "Claude 3.7 / ChatGPT 4.5",
+          target: "Claude Sonnet 5 / ChatGPT 4.5",
           strategy: "socratic",
           content: sanitizeAndFormatMarkdown(`Before implementing "${cleanTitle}" (${brief}), interrogate the requirements with Socratic rigor:
 

@@ -256,7 +256,9 @@ export default function App() {
                   />
                 </div>
               </div>
-              <span className="font-bold text-lg tracking-tight text-white">Digitano Builder</span>
+              <span className="font-hightech font-bold text-base tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-200 to-cyan-400 hightech-glow-text">
+                DIGITANO DEV-DOCS
+              </span>
             </div>
 
             <div className="flex items-center gap-3">
@@ -294,7 +296,9 @@ export default function App() {
 
             {/* Headline */}
             <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight max-w-4xl leading-tight sm:leading-tight mb-6">
-              Digitano Builder:{" "}
+              <span className="font-hightech tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-200 to-cyan-400 drop-shadow-[0_0_20px_rgba(6,182,212,0.4)]">
+                Digitano Dev-Docs:
+              </span>{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#06B6D4] via-[#38BDF8] to-[#3B82F6]">
                 Autonomous Multi-Agent SDLC Engine
               </span>

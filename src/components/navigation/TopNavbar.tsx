@@ -10,10 +10,15 @@ export function TopNavbar({ currentProjectTitle, onOpenExportModal }: TopNavbarP
   return (
     <header className="h-14 border-b border-[#1E293B] bg-[#0B0F17]/80 backdrop-blur-md px-6 flex items-center justify-between z-10">
       <div className="flex items-center gap-3">
-        <span className="text-xs font-mono text-cyan-400 flex items-center gap-1.5">
-          <Terminal className="w-3.5 h-3.5" />
-          <span>SDLC Engine v2.0</span>
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="font-hightech text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-blue-400 uppercase tracking-wider flex items-center gap-1.5 hightech-glow-text">
+            <Terminal className="w-3.5 h-3.5 text-cyan-400" />
+            <span>DIGITANO DEV-DOCS</span>
+          </span>
+          <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-cyan-950/80 text-cyan-300 border border-cyan-800/60 shadow-[0_0_8px_rgba(6,182,212,0.3)]">
+            v2.5
+          </span>
+        </div>
         <span className="text-slate-600">/</span>
         <span className="text-xs font-medium text-slate-300">
           {currentProjectTitle || "Autonomous Scrum Orchestrator"}

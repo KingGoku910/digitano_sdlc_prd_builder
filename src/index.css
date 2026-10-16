@@ -43,3 +43,22 @@
   box-shadow: 0 0 35px -5px rgba(59, 130, 246, 0.2);
 }
 
+.glow-purple {
+  box-shadow: 0 0 30px -5px rgba(168, 85, 247, 0.25);
+}
+
+/* High-tech Cybernetic Typography */
+.font-hightech {
+  font-family: 'Orbitron', 'Chakra Petch', 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  letter-spacing: 0.08em;
+}
+
+.font-tech-mono {
+  font-family: 'JetBrains Mono', 'Chakra Petch', monospace;
+  letter-spacing: 0.05em;
+}
+
+.hightech-glow-text {
+  text-shadow: 0 0 12px rgba(6, 182, 212, 0.5), 0 0 24px rgba(59, 130, 246, 0.3);
+}
+
