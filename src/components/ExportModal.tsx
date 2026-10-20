@@ -19,10 +19,10 @@ const MONOREPO_FILES: Array<{
     summary: "FastAPI server, CORS, Cognito RS256 JWKS token validation & SSE router",
   },
   {
-    path: "backend/router.py",
+    path: "backend/google/adk/agents/llm_agent.py",
     category: "backend",
     language: "python",
-    summary: "7-Agent SDLC Orchestrator with AWS Bedrock to Google Gemini failover",
+    summary: "Google ADK Agent Cluster with AWS Bedrock Model execution & Gemini Failover",
   },
   {
     path: "backend/dynamo_service.py",

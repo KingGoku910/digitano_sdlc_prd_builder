@@ -42,7 +42,7 @@ const SAMPLE_BLUEPRINTS = [
     ui: ["Tailwind CSS v4", "shadcn/ui"],
     backend: "Python (FastAPI)",
     dbPreset: "supabase_vector",
-    models: ["anthropic.claude-sonnet-5", "gemini-3.8-flash"],
+    models: ["us.anthropic.claude-sonnet-5", "gemini-3.8-flash"],
     mode: "Multi-Agent" as AgentModeType,
     description: `Build "AuditPulse AI," an enterprise-grade B2B contract risk auditing platform. Mid-market companies, agencies, and legal teams upload vendor NDAs, MSAs, and client agreements. The system parses document text, identifies high-risk liabilities, missing indemnity protections, and hidden auto-renewal clauses, providing an instant overall risk score (0–100) along with line-by-line redline suggestions.`,
   },
@@ -53,7 +53,7 @@ const SAMPLE_BLUEPRINTS = [
     ui: ["Tailwind CSS v4", "shadcn/ui"],
     backend: "Python (FastAPI)",
     dbPreset: "firebase_firestore",
-    models: ["anthropic.claude-sonnet-5", "gemini-3.8-flash"],
+    models: ["us.anthropic.claude-sonnet-5", "gemini-3.8-flash"],
     mode: "Multi-Agent" as AgentModeType,
     description: `Build "DripCheck", a high-performance fashion rating web application with Next.js 16 (App Router), Tailwind CSS v4, and shadcn/ui. Python FastAPI backend processes uploaded outfit photos, stores media assets in Firebase Firestore DB and Firebase Cloud Storage, and invokes AWS Bedrock Claude Sonnet 5 with Google Gemini failover for 0-10 style scoring.`,
   },
@@ -64,7 +64,7 @@ const SAMPLE_BLUEPRINTS = [
     ui: ["Tailwind CSS v4", "shadcn/ui"],
     backend: "Python (FastAPI)",
     dbPreset: "dynamo_s3",
-    models: ["gemini-3.5-pro", "anthropic.claude-haiku-4-5-20251001-v1:0"],
+    models: ["gemini-3.5-pro", "us.anthropic.claude-haiku-4-5-20251001-v1:0"],
     mode: "Multi-Agent" as AgentModeType,
     description: `Real-time freight route dispatch HUD tracking truck telemetry, driver duty cycles, and automated cargo temperature alerts with sub-50ms optimistic state updates.`,
   },
@@ -75,7 +75,7 @@ const SAMPLE_BLUEPRINTS = [
     ui: ["Tamagui", "NativeWind (Tailwind)"],
     backend: "Python (FastAPI Serverless)",
     dbPreset: "postgres_redis",
-    models: ["anthropic.claude-haiku-4-5-20251001-v1:0", "gpt-4o"],
+    models: ["us.anthropic.claude-haiku-4-5-20251001-v1:0", "gpt-4o"],
     mode: "Single Agent" as AgentModeType,
     description: `HIPAA-compliant patient portal with appointment booking, encrypted lab report storage, asynchronous doctor messaging, and push notifications for medication reminders.`,
   },
@@ -98,7 +98,7 @@ export function ProjectBriefInput({ onSubmit, isLoading = false }: ProjectBriefI
   const [backend, setBackend] = useState<string>("Python (FastAPI)");
   const [selectedDbPreset, setSelectedDbPreset] = useState<string>("postgres_redis");
   const [customDatabases, setCustomDatabases] = useState<string[]>(["PostgreSQL 16", "Redis (In-Memory)"]);
-  const [selectedModels, setSelectedModels] = useState<string[]>(["anthropic.claude-sonnet-5", "gemini-3.8-flash"]);
+  const [selectedModels, setSelectedModels] = useState<string[]>(["us.anthropic.claude-sonnet-5", "gemini-3.8-flash"]);
   const [selectedManufacturerTab, setSelectedManufacturerTab] = useState<"Google" | "Anthropic" | "OpenAI" | "DeepSeek">("Google");
   const [agentMode, setAgentMode] = useState<AgentModeType>("Multi-Agent");
 

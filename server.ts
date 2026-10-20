@@ -329,15 +329,93 @@ function resolveBedrockCandidates(requestedModels: (string | undefined)[], targe
       candidates.push(`us.${trimmed}`);
     }
 
-    // 2. Direct model ID
-    candidates.push(trimmed);
+    // 2. Direct model ID (only for non-Anthropic models or if profile is unavailable)
+    if (!trimmed.includes('anthropic.claude-')) {
+      candidates.push(trimmed);
+    }
   }
 
-  // Active on-demand models on Bedrock (Claude Sonnet 5 & Claude Haiku 4.5)
-  candidates.push('anthropic.claude-sonnet-5');
-  candidates.push('anthropic.claude-haiku-4-5-20251001-v1:0');
-
   return Array.from(new Set(candidates));
+}
+
+// Helper to classify AWS Bedrock invocation errors with precision
+function classifyBedrockError(err: any, modelId: string): {
+  category: 'USE_CASE_FORM_PENDING' | 'THROTTLED_DAILY_LIMIT' | 'ACCESS_DENIED' | 'MODEL_NOT_FOUND' | 'IAM_CREDENTIAL_ERROR' | 'UNKNOWN_ERROR';
+  headline: string;
+  detail: string;
+  suggestedAction: string;
+  isApprovalPending: boolean;
+} {
+  if (!err) {
+    return {
+      category: 'UNKNOWN_ERROR',
+      headline: 'IAM Credentials Pending',
+      detail: 'AWS IAM access key or 40-char secret key not provided.',
+      suggestedAction: 'Ensure AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are set in server environment.',
+      isApprovalPending: false
+    };
+  }
+
+  const name = err.name || '';
+  const msg = err.message || '';
+
+  // 1. Anthropic Use Case Form Pending / Model Not Granted on Account
+  if (
+    msg.includes('use case details have not been submitted') ||
+    msg.includes('Anthropic use case') ||
+    msg.includes('is not available for this account') ||
+    msg.includes('contact AWS Sales') ||
+    (name === 'AccessDeniedException' && !msg.toLowerCase().includes('kms') && !msg.toLowerCase().includes('iam'))
+  ) {
+    return {
+      category: 'USE_CASE_FORM_PENDING',
+      headline: 'Anthropic Use Case Submitted — Waiting for AWS Confirmation',
+      detail: `AWS Bedrock returned ${name}: "${msg}". The Use Case form was submitted and is pending AWS/Anthropic activation for ${modelId}.`,
+      suggestedAction: 'Wait for AWS confirmation email or monitor AWS Bedrock Console > Model access status.',
+      isApprovalPending: true
+    };
+  }
+
+  // 2. Throttling / Token limit per day
+  if (name === 'ThrottlingException' || msg.includes('Too many tokens per day') || msg.includes('Rate exceeded')) {
+    return {
+      category: 'THROTTLED_DAILY_LIMIT',
+      headline: 'AWS Daily Quota Limit Reached (Tokens Per Day)',
+      detail: `AWS Bedrock returned ${name}: "${msg}". The daily quota for this model on your AWS account has been exhausted.`,
+      suggestedAction: 'AWS resets daily token quotas at 00:00 UTC. To request a higher quota, open AWS Service Quotas > Amazon Bedrock.',
+      isApprovalPending: false
+    };
+  }
+
+  // 3. Resource not found / Model deprecated
+  if (name === 'ResourceNotFoundException' || msg.includes('end of its life') || msg.includes('not found')) {
+    return {
+      category: 'MODEL_NOT_FOUND',
+      headline: 'Model Identifier / Inference Profile Not Found',
+      detail: `AWS Bedrock returned ${name}: "${msg}".`,
+      suggestedAction: `Ensure cross-region inference profile (us.${modelId}) is targeted in us-east-1.`,
+      isApprovalPending: false
+    };
+  }
+
+  // 4. IAM Signature / Credentials
+  if (name === 'InvalidSignatureException' || name === 'UnrecognizedClientException') {
+    return {
+      category: 'IAM_CREDENTIAL_ERROR',
+      headline: 'AWS IAM Secret Key Signature Invalid',
+      detail: `AWS Bedrock returned ${name}: "${msg}".`,
+      suggestedAction: 'Verify AWS_ACCESS_KEY_ID and 40-character AWS_SECRET_ACCESS_KEY.',
+      isApprovalPending: false
+    };
+  }
+
+  return {
+    category: 'UNKNOWN_ERROR',
+    headline: `AWS Bedrock Error (${name})`,
+    detail: msg,
+    suggestedAction: 'Inspect AWS Bedrock Console or CloudWatch logs.',
+    isApprovalPending: false
+  };
 }
 
   // Bedrock Claude Execution Endpoint with Gemini Autonomous Failover
@@ -348,11 +426,11 @@ function resolveBedrockCandidates(requestedModels: (string | undefined)[], targe
     const accessKeyId = (customCredentials?.accessKeyId || process.env.AWS_ACCESS_KEY_ID || 'AKIA5RURABIWRXNTZAMQ').trim();
     const rawSecret = (customCredentials?.secretAccessKey || process.env.AWS_SECRET_ACCESS_KEY || '').trim();
     // AWS IAM Secret Access Keys must be exactly 40 base64 characters; discard incomplete/invalid defaults
-    const secretAccessKey = (rawSecret.length === 40 && rawSecret !== '20un1TmaK/JGV6p6uVKY6gLRejK+4oBySjRr9') ? rawSecret : '';
+    const secretAccessKey = (rawSecret.length === 40) ? rawSecret : '';
 
     // Specific model target per agent role:
-    // Orchestrator, Researcher, Product Owner (agent_1_vision): anthropic.claude-sonnet-5
-    // Rest of Agents (Requirements, Architecture, UI/UX, Risks, Metrics): anthropic.claude-haiku-4-5-20251001-v1:0
+    // Orchestrator, Researcher, Product Owner (agent_1_vision): us.anthropic.claude-sonnet-5
+    // Rest of Agents (Requirements, Architecture, UI/UX, Risks, Metrics): us.anthropic.claude-haiku-4-5-20251001-v1:0
     const isSonnetTarget =
       agentId === 'orchestrator_agent' ||
       agentId === 'researcher_agent' ||
@@ -360,19 +438,20 @@ function resolveBedrockCandidates(requestedModels: (string | undefined)[], targe
       agentId === 'agent_01';
 
     const defaultTargetModel = isSonnetTarget
-      ? 'anthropic.claude-sonnet-5'
-      : 'anthropic.claude-haiku-4-5-20251001-v1:0';
+      ? 'us.anthropic.claude-sonnet-5'
+      : 'us.anthropic.claude-haiku-4-5-20251001-v1:0';
 
-    const rawModelList: (string | undefined)[] = [
-      customCredentials?.modelId,
-      process.env.BEDROCK_MODEL_ID,
-      defaultTargetModel,
-      isSonnetTarget ? 'anthropic.claude-sonnet-5' : 'anthropic.claude-haiku-4-5-20251001-v1:0',
-      customCredentials?.model2Id,
-      process.env.BEDROCK_MODEL_2_ID,
-      'anthropic.claude-haiku-4-5-20251001-v1:0',
-      'anthropic.claude-sonnet-5',
-    ];
+    const rawModelList: (string | undefined)[] = isSonnetTarget
+      ? [
+          customCredentials?.modelId,
+          process.env.BEDROCK_MODEL_ID,
+          'us.anthropic.claude-sonnet-5',
+        ]
+      : [
+          customCredentials?.model2Id,
+          process.env.BEDROCK_MODEL_2_ID,
+          'us.anthropic.claude-haiku-4-5-20251001-v1:0',
+        ];
 
     const uniqueBedrockModels = resolveBedrockCandidates(rawModelList, region);
     const primaryModelId = uniqueBedrockModels[0] || defaultTargetModel;
@@ -380,7 +459,7 @@ function resolveBedrockCandidates(requestedModels: (string | undefined)[], targe
     console.log('\n==================== [AI AGENT TASK DISPATCH] ====================');
     console.log(`[Bedrock Dispatch] 🤖 Target Agent: ${agentName || 'Agent'} (${agentId || 'id'})`);
     console.log(`[Bedrock Dispatch] 🕒 Timestamp: ${new Date().toISOString()}`);
-    console.log(`[Bedrock Priority] 🎯 PRIORITY 1: AWS Bedrock ${isSonnetTarget ? 'Claude Sonnet 5' : 'Claude Haiku 4.5'} (EXCLUSIVELY FIRED FIRST)`);
+    console.log(`[Bedrock Priority] 🎯 PRIORITY 1: AWS Bedrock ${isSonnetTarget ? 'Claude Sonnet 5' : 'Claude Haiku 4.5'} (${primaryModelId})`);
     console.log(`[Bedrock Config] Prioritized Model Pool: ${uniqueBedrockModels.join(' -> ')}`);
     console.log(`[Bedrock Config] Region: ${region}`);
     console.log(`[Bedrock Config] Access Key ID: ${accessKeyId ? accessKeyId.slice(0, 4) + '...' + accessKeyId.slice(-4) : 'NONE'}`);
@@ -389,7 +468,7 @@ function resolveBedrockCandidates(requestedModels: (string | undefined)[], targe
 
     let bedrockError: any = null;
 
-    // 1. Attempt AWS Bedrock Claude models (EXCLUSIVELY FIRST - NO PARALLEL GEMINI CALL)
+    // 1. Attempt AWS Bedrock Claude models (EXCLUSIVELY FIRST)
     // Only dispatch to Bedrock if credentials strictly conform to AWS IAM key specifications (20 chars / 40 chars)
     const hasValidAwsCredentials = Boolean(
       accessKeyId &&
@@ -444,7 +523,7 @@ function resolveBedrockCandidates(requestedModels: (string | undefined)[], targe
 
           return res.json({
             success: true,
-            engine: isSonnetTarget ? 'AWS Bedrock (Claude Sonnet 5)' : 'AWS Bedrock (Claude Haiku 4.5)',
+            engine: isSonnetTarget ? 'AWS Bedrock (us.anthropic.claude-sonnet-5)' : 'AWS Bedrock (us.anthropic.claude-haiku-4-5-20251001-v1:0)',
             modelName: modelTitle,
             modelId: candidateModel,
             provider: `AWS Bedrock (${region})`,
@@ -454,130 +533,64 @@ function resolveBedrockCandidates(requestedModels: (string | undefined)[], targe
             failoverEngaged: false
           });
         } catch (err: any) {
-          bedrockError = err;
+          if (!bedrockError || idx === 0 || err.name === 'ThrottlingException' || err.message?.includes('use case') || err.name === 'AccessDeniedException') {
+            bedrockError = err;
+          }
           const errName = err.name || 'Error';
-          console.log(`[Bedrock Routing Note] ${modelLabel} status (${errName}). Assessing failover sequence.`);
-          if (err.name === 'InvalidSignatureException' || err.name === 'AccessDeniedException') {
-            console.log(`[Bedrock Diagnostic] IAM policy or credentials evaluation note (${errName}). Engaging automated failover.`);
-            break; // Secret key error or access denial affects all Bedrock models
+          const classified = classifyBedrockError(err, candidateModel);
+
+          console.warn(`\n------------------------------------------------------------------`);
+          console.warn(`🔍 [Bedrock Candidate Note: ${modelLabel}]`);
+          console.warn(`   Category: ${classified.category}`);
+          console.warn(`   Headline: ${classified.headline}`);
+          console.warn(`   AWS Error: ${errName} - ${err.message || 'unknown error'}`);
+          console.warn(`   Suggested Action: ${classified.suggestedAction}`);
+          console.warn(`------------------------------------------------------------------\n`);
+
+          if (err.name === 'InvalidSignatureException') {
+            console.warn(`[Bedrock Diagnostic] IAM secret key signature invalid (${err.message}).`);
+            break; // Secret key error affects all Bedrock calls
           }
         }
       }
     } else {
-      console.log(`[Bedrock Execution] ℹ️ AWS IAM credentials pending full 40-character secret key. Seamlessly engaging autonomous failover layer...`);
+      console.log(`[Bedrock Execution] ℹ️ AWS IAM credentials pending full 40-character secret key.`);
     }
 
-    // 2. Automated Failover Layer: Google Gemini Models (ONLY ENGAGED IF BEDROCK FAILS)
-    console.log(`[Failover Dispatch] 🔄 Bedrock not available. Evaluating sequential Gemini failover layer (3.5 or newer)...`);
+    const modelTitle = isSonnetTarget ? 'Anthropic Claude Sonnet 5' : 'Anthropic Claude Haiku 4.5';
+    const classification = classifyBedrockError(bedrockError, primaryModelId);
 
-    // Rotate across 3 Gemini API keys with fallback
-    const geminiKeysPool: string[] = [
-      customCredentials?.geminiApiKey,
-      customCredentials?.geminiApi2Key,
-      customCredentials?.geminiApi3Key,
-      process.env.GEMINI_API_KEY,
-      process.env.GEMINI_API2_KEY,
-      process.env.GEMINI_API3_KEY,
-    ].filter(
-      (key): key is string =>
-        typeof key === 'string' &&
-        key.trim().length >= 30 &&
-        !key.startsWith('AQ.') &&
-        key !== 'MY_GEMINI_API_KEY'
-    );
-
-    let geminiSucceeded = false;
-
-    if (geminiKeysPool.length > 0) {
-      console.log(`[Google Gemini Failover] Found ${geminiKeysPool.length} valid Gemini API keys in rotation pool. Testing keys in round-robin/sequential rotation...`);
-
-      for (let keyIdx = 0; keyIdx < geminiKeysPool.length; keyIdx++) {
-        const currentKey = geminiKeysPool[keyIdx];
-        const keyLabel = `Key #${keyIdx + 1} (${currentKey.slice(0, 6)}...${currentKey.slice(-4)})`;
-        console.log(`[Google Gemini Failover] 🔑 Attempting with ${keyLabel}...`);
-
-        try {
-          const aiInstance = new GoogleGenAI({ apiKey: currentKey });
-          // Gemini Flash models strictly 3.5 or newer
-          const candidateModels = ['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-3-flash'];
-          let geminiRespText = '';
-          let matchedModel = 'gemini-3.5-flash';
-
-          for (const model of candidateModels) {
-            try {
-              console.log(`[Google Gemini Failover] Testing model: ${model} with ${keyLabel}...`);
-              const callPromise = aiInstance.models.generateContent({
-                model,
-                contents: prompt,
-                config: {
-                  systemInstruction: systemInstruction || undefined,
-                  temperature: 0.2
-                }
-              });
-              const timeoutPromise = new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error('GEMINI_CALL_TIMEOUT')), 4500)
-              );
-              const resp = await Promise.race([callPromise, timeoutPromise]);
-              if (resp?.text) {
-                geminiRespText = resp.text;
-                matchedModel = model;
-                console.log(`[Google Gemini Failover] ✅ Gemini model ${model} SUCCEEDED with ${keyLabel}! Output: ${geminiRespText.length} chars.`);
-                break;
-              }
-            } catch (modelErr: any) {
-              console.log(`[Google Gemini Failover] Model ${model} unavailable with ${keyLabel}. Continuing failover sequence...`);
-              // If quota or rate limited, try next key in pool immediately
-              if (modelErr?.message?.includes('quota') || modelErr?.message?.includes('RESOURCE_EXHAUSTED') || modelErr?.status === 429) {
-                console.log(`[Google Gemini Failover] Quota reached for ${keyLabel}. Rotating to next Gemini key in pool...`);
-                break;
-              }
-            }
-          }
-
-          if (geminiRespText) {
-            geminiSucceeded = true;
-            const modelNameFormatted = matchedModel === 'gemini-3.8-flash'
-              ? 'Google Gemini 3.8 Flash'
-              : matchedModel === 'gemini-3.5-flash'
-              ? 'Google Gemini 3.5 Flash'
-              : `Google ${matchedModel}`;
-
-            console.log('==================================================================\n');
-            return res.json({
-              success: true,
-              engine: `Google Gemini (${matchedModel})`,
-              modelName: modelNameFormatted,
-              modelId: matchedModel,
-              provider: `Google GenAI API [${keyLabel}]`,
-              text: geminiRespText,
-              bedrockAttempted: true,
-              bedrockSucceeded: false,
-              failoverEngaged: true,
-              notes: bedrockError ? `Automated failover protocol engaged cleanly` : 'Bedrock failover activated'
-            });
-          }
-        } catch (keyErr: any) {
-          console.log(`[Google Gemini Failover] Notice with ${keyLabel}, continuing pool...`);
-        }
-      }
-    } else {
-      console.log(`[Failover Dispatch] No valid Gemini API keys found in rotation pool. Bypassing Gemini direct API call.`);
-    }
-
-    // 3. Fallback to Local SDLC Domain Synthesizer Protocol
-    console.log(`[SDLC Synthesizer] ⚡ Handing off to deterministic SDLC domain synthesizer (Claude Sonnet Protocol)...`);
-    console.log('==================================================================\n');
+    console.warn(`\n[Bedrock Direct Test Mode Summary]`);
+    console.warn(`🤖 Agent: ${agentName || 'Agent'} (${agentId || 'id'})`);
+    console.warn(`📌 Target Model: ${modelTitle} (${primaryModelId})`);
+    console.warn(`🏷️ Status: ${classification.headline}`);
+    console.warn(`🔍 Detail: ${classification.detail}`);
+    console.warn(`💡 Action: ${classification.suggestedAction}\n`);
 
     return res.json({
-      success: true,
-      engine: 'AWS Bedrock (Claude Sonnet Protocol)',
-      modelName: 'Anthropic Claude Sonnet',
+      success: false,
+      engine: `AWS Bedrock (${primaryModelId})`,
+      modelName: modelTitle,
       modelId: primaryModelId,
-      provider: `AWS Bedrock (${region}) & Local SDLC Orchestrator`,
-      text: '', // Triggers high-fidelity domain synthesizer on client
+      provider: `AWS Bedrock (${region})`,
+      text: '',
       bedrockAttempted: true,
-      failoverEngaged: true,
-      notes: 'Automated failover protocol engaged cleanly'
+      bedrockSucceeded: false,
+      failoverEngaged: false,
+      notes: `${classification.headline}: ${bedrockError ? bedrockError.message : 'Credentials pending'}`,
+      bedrockFailureReason: bedrockError ? `${bedrockError.name}: ${bedrockError.message}` : 'Bedrock invocation failed',
+      bedrockDiagnostic: {
+        category: classification.category,
+        headline: classification.headline,
+        detail: classification.detail,
+        suggestedAction: classification.suggestedAction,
+        isApprovalPending: classification.isApprovalPending,
+        awsErrorName: bedrockError?.name || 'Error',
+        awsErrorMessage: bedrockError?.message || 'Bedrock invocation failed',
+        candidateModelsAttempted: uniqueBedrockModels,
+        region,
+        timestamp: new Date().toISOString()
+      }
     });
   });
 
@@ -868,8 +881,8 @@ Please enhance this exact project into a comprehensive, high-context specificati
     console.log(`[ADK PRD Pipeline] 🚀 Initiating 8-Agent Sequential Execution Graph for: "${productName}"`);
     console.log(`==================================================================`);
 
-    const SONNET_PRIMARY = 'anthropic.claude-sonnet-5';
-    const HAIKU_PRIMARY = 'anthropic.claude-haiku-4-5-20251001-v1:0';
+    const SONNET_PRIMARY = 'us.anthropic.claude-sonnet-5';
+    const HAIKU_PRIMARY = 'us.anthropic.claude-haiku-4-5-20251001-v1:0';
 
     const ORCHESTRATOR_PRIMARY = SONNET_PRIMARY;
     const ORCHESTRATOR_FAILOVER = 'gemini-3.5-pro';

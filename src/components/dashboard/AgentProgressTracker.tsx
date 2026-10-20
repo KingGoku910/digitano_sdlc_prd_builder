@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   CheckCircle2,
   Loader2,
@@ -13,10 +13,18 @@ import {
   Copy,
   Check,
   Zap,
+  ChevronLeft,
+  ChevronRight,
+  LayoutGrid,
+  ListFilter,
+  AlertTriangle,
+  AlertCircle,
+  Info,
 } from "lucide-react";
 import { CuteRobotAvatar } from "./CuteRobotAvatar";
 import { AgentPerformanceChart, AgentPerformanceMetrics } from "./AgentPerformanceChart";
 import { ProjectSpecificationInputs } from "../../types/projectSpec";
+import { BedrockDiagnosticInfo } from "../../services/sdlcEngine";
 import {
   Layers,
   Database,
@@ -52,6 +60,7 @@ export interface AgentState {
   modelInfo?: AgentModelInfo;
   taskHandoff?: AgentTaskHandoff;
   metrics?: AgentPerformanceMetrics;
+  bedrockDiagnostic?: BedrockDiagnosticInfo;
 }
 
 interface AgentProgressTrackerProps {
@@ -78,6 +87,19 @@ export function AgentProgressTracker({
   const [expandedOutputs, setExpandedOutputs] = useState<Record<string, boolean>>({});
   const [copiedModelId, setCopiedModelId] = useState<string | null>(null);
   const [showMcpDetails, setShowMcpDetails] = useState(false);
+
+  const [activeTabAgentId, setActiveTabAgentId] = useState<string>(
+    agents[0]?.id || "researcher_agent"
+  );
+  const [viewMode, setViewMode] = useState<"tabbed" | "list">("tabbed");
+
+  // Automatically switch tab to follow active agent during execution
+  useEffect(() => {
+    const thinking = agents.find((a) => a.status === "thinking");
+    if (thinking) {
+      setActiveTabAgentId(thinking.id);
+    }
+  }, [agents]);
 
   const toggleOutput = (agentId: string) => {
     setExpandedOutputs((prev) => ({
@@ -276,7 +298,7 @@ export function AgentProgressTracker({
             <div className="p-2.5 rounded-xl bg-[#0B0F17]/80 border border-[#1E293B]">
               <span className="text-[10px] text-slate-400 font-mono block">AI Strategy &amp; Models</span>
               <span className="font-semibold text-emerald-300 truncate block mt-0.5">
-                {specInputs?.aiIntegration?.models?.join(", ") || "Claude 3.7 + Gemini 3.8"} ({specInputs?.aiIntegration?.agentMode || "Multi-Agent"})
+                {specInputs?.aiIntegration?.models?.join(", ") || "Claude Sonnet 5 & Haiku 4.5"} ({specInputs?.aiIntegration?.agentMode || "Multi-Agent"})
               </span>
             </div>
           </div>
@@ -289,9 +311,9 @@ export function AgentProgressTracker({
         </div>
       )}
 
-      {/* Agents Timeline List */}
-      <div className="space-y-4">
-        {agents.map((agent) => {
+      {/* Agent Card Renderer Helper */}
+      {(() => {
+        const renderSingleAgentCard = (agent: AgentState) => {
           const isCurrent = agent.status === "thinking";
           const isComplete = agent.status === "complete";
           const isPending = agent.status === "pending";
@@ -305,7 +327,7 @@ export function AgentProgressTracker({
             agent.id === "agent_01" ||
             agent.id === "agent_07";
           const defaultClaudeName = isSonnetAgent ? "Anthropic Claude Sonnet 5" : "Anthropic Claude Haiku 4.5";
-          const defaultClaudeId = isSonnetAgent ? "anthropic.claude-sonnet-5" : "anthropic.claude-haiku-4-5-20251001-v1:0";
+          const defaultClaudeId = isSonnetAgent ? "us.anthropic.claude-sonnet-5" : "us.anthropic.claude-haiku-4-5-20251001-v1:0";
 
           const modelName = agent.modelInfo?.modelName || (agent.engineUsed?.includes("Gemini") ? "Google Gemini 3.5 Flash" : defaultClaudeName);
           const modelId = agent.modelInfo?.modelId || (agent.engineUsed?.includes("Gemini") ? "gemini-3.5-flash" : defaultClaudeId);
@@ -447,6 +469,44 @@ export function AgentProgressTracker({
                     </button>
                   </div>
                 </div>
+
+                {/* Bedrock Model Status Diagnostic Banner */}
+                {agent.bedrockDiagnostic && (
+                  <div className={`mt-2.5 p-3 rounded-xl border text-xs font-mono space-y-1.5 transition-all ${
+                    agent.bedrockDiagnostic.isApprovalPending
+                      ? "bg-sky-950/40 border-sky-800/60 text-sky-200"
+                      : agent.bedrockDiagnostic.category === "THROTTLED_DAILY_LIMIT"
+                      ? "bg-amber-950/40 border-amber-800/60 text-amber-200"
+                      : "bg-rose-950/30 border-rose-800/50 text-rose-200"
+                  }`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 font-bold">
+                        {agent.bedrockDiagnostic.isApprovalPending ? (
+                          <Clock className="w-3.5 h-3.5 text-sky-400 animate-pulse shrink-0" />
+                        ) : agent.bedrockDiagnostic.category === "THROTTLED_DAILY_LIMIT" ? (
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        ) : (
+                          <AlertCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                        )}
+                        <span className="uppercase tracking-wider text-[11px]">
+                          AWS BEDROCK STATUS: {agent.bedrockDiagnostic.headline}
+                        </span>
+                      </div>
+                      <span className="text-[10px] px-2 py-0.5 rounded font-sans uppercase font-semibold tracking-wider bg-slate-900 border border-slate-700/60">
+                        {agent.bedrockDiagnostic.isApprovalPending ? "Pending AWS Approval" : agent.bedrockDiagnostic.category}
+                      </span>
+                    </div>
+                    <div className="text-[11px] leading-relaxed opacity-90 font-sans">
+                      {agent.bedrockDiagnostic.detail}
+                    </div>
+                    {agent.bedrockDiagnostic.suggestedAction && (
+                      <div className="text-[10px] text-slate-400 pt-0.5 border-t border-slate-800/80 flex items-center gap-1">
+                        <span className="text-cyan-400 font-mono font-semibold">Action:</span>
+                        <span>{agent.bedrockDiagnostic.suggestedAction}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* 2. TASK HANDOFF & ACTION TAKEN SECTION */}
@@ -560,8 +620,168 @@ export function AgentProgressTracker({
               )}
             </div>
           );
-        })}
-      </div>
+        };
+
+        const currentAgentIndex = agents.findIndex((a) => a.id === activeTabAgentId);
+        const selectedAgent = agents[currentAgentIndex >= 0 ? currentAgentIndex : 0] || agents[0];
+        const prevAgent = currentAgentIndex > 0 ? agents[currentAgentIndex - 1] : null;
+        const nextAgent = currentAgentIndex < agents.length - 1 ? agents[currentAgentIndex + 1] : null;
+
+        return (
+          <div className="space-y-4">
+            {/* Tab Controls Bar Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-[#131924] border border-[#1E293B]">
+              <div className="flex items-center gap-2.5">
+                <LayoutGrid className="w-4 h-4 text-cyan-400" />
+                <h3 className="text-xs font-mono font-bold text-white uppercase tracking-wider">
+                  SDLC Agent Workspaces
+                </h3>
+                <span className="px-2 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-800/40 text-[10px] font-mono text-cyan-300">
+                  {completedCount} of {totalAgents} Ready
+                </span>
+                {isFinished && (
+                  <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-700/50 text-[10px] font-mono text-emerald-300">
+                    All Deliverables Synthesized
+                  </span>
+                )}
+              </div>
+
+              {/* View Mode Toggle: Tabbed vs List */}
+              <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#0B0F17] border border-[#1E293B] self-start sm:self-auto">
+                <button
+                  onClick={() => setViewMode("tabbed")}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+                    viewMode === "tabbed"
+                      ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  <span>Tabbed View</span>
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+                    viewMode === "list"
+                      ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <ListFilter className="w-3.5 h-3.5" />
+                  <span>List View</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Interactive Agent Tabs Strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+              {agents.map((agent, idx) => {
+                const isTabActive = agent.id === selectedAgent?.id;
+                const isAgentCurrent = agent.status === "thinking";
+                const isAgentComplete = agent.status === "complete";
+
+                return (
+                  <button
+                    key={agent.id}
+                    onClick={() => {
+                      setActiveTabAgentId(agent.id);
+                      if (viewMode === "list") setViewMode("tabbed");
+                    }}
+                    className={`p-2.5 rounded-xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between ${
+                      isTabActive
+                        ? "bg-gradient-to-b from-cyan-950/80 via-[#131924] to-[#131924] border-cyan-500/80 text-white shadow-lg shadow-cyan-500/10 ring-1 ring-cyan-500/40"
+                        : "bg-[#0B0F17]/80 hover:bg-[#131924] border-[#1E293B] hover:border-slate-700 text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                      <span
+                        className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-bold ${
+                          isTabActive
+                            ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
+                            : "bg-slate-800/80 text-slate-400"
+                        }`}
+                      >
+                        {agent.tag}
+                      </span>
+                      <div>
+                        {isAgentComplete && (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        )}
+                        {isAgentCurrent && (
+                          <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
+                        )}
+                        {!isAgentComplete && !isAgentCurrent && (
+                          <div className="w-2 h-2 rounded-full bg-slate-700" />
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="font-semibold text-xs truncate">
+                      {agent.name.replace(/^Agent\s*\d+\s*[-:]?\s*/i, "")}
+                    </div>
+
+                    <div className="text-[10px] text-slate-500 font-mono mt-0.5 truncate">
+                      {agent.number}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Tabbed Content View */}
+            {viewMode === "tabbed" ? (
+              <div className="space-y-3">
+                {/* Stepper Navigation Strip */}
+                <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-[#0B0F17]/70 border border-[#1E293B] text-xs">
+                  <button
+                    disabled={!prevAgent}
+                    onClick={() => prevAgent && setActiveTabAgentId(prevAgent.id)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                      prevAgent
+                        ? "bg-[#131924] hover:bg-[#1E293B] text-slate-300 hover:text-white border border-[#1E293B]"
+                        : "opacity-40 cursor-not-allowed text-slate-600"
+                    }`}
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Previous:</span>
+                    <span className="font-mono text-cyan-400">{prevAgent?.tag || "Start"}</span>
+                  </button>
+
+                  <div className="flex items-center gap-2 text-slate-300 font-mono text-[11px]">
+                    <span className="text-cyan-400 font-bold">
+                      Step {currentAgentIndex + 1} of {agents.length}:
+                    </span>
+                    <span className="font-medium text-white truncate max-w-[200px] sm:max-w-none">
+                      {selectedAgent?.name}
+                    </span>
+                  </div>
+
+                  <button
+                    disabled={!nextAgent}
+                    onClick={() => nextAgent && setActiveTabAgentId(nextAgent.id)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                      nextAgent
+                        ? "bg-[#131924] hover:bg-[#1E293B] text-slate-300 hover:text-white border border-[#1E293B]"
+                        : "opacity-40 cursor-not-allowed text-slate-600"
+                    }`}
+                  >
+                    <span className="hidden sm:inline">Next:</span>
+                    <span className="font-mono text-cyan-400">{nextAgent?.tag || "End"}</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {/* Render Selected Agent Component */}
+                {selectedAgent && renderSingleAgentCard(selectedAgent)}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {agents.map((agent) => renderSingleAgentCard(agent))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }

@@ -176,7 +176,7 @@ export function assessDynamicStack(
   // 7. Assess AI Models & Agent Configuration
   const models: string[] = [];
   if (/claude|sonnet|bedrock|anthropic/i.test(lower)) {
-    models.push("anthropic.claude-sonnet-5");
+    models.push("us.anthropic.claude-sonnet-5");
   }
   if (/gemini|google adk/i.test(lower) || models.length === 1) {
     models.push("gemini-3.8-flash");
@@ -188,7 +188,7 @@ export function assessDynamicStack(
     models.unshift("deepseek-r1");
   }
   if (models.length === 0) {
-    models.push("anthropic.claude-sonnet-5", "gemini-3.8-flash");
+    models.push("us.anthropic.claude-sonnet-5", "gemini-3.8-flash");
   }
   const finalModels = models.slice(0, 2);
 
@@ -243,7 +243,7 @@ export function assessDynamicStack(
     reasonParts.push("Go Gin/Fiber Low-Latency Engine");
   }
 
-  if (finalModels.includes("anthropic.claude-sonnet-5") || lower.includes("bedrock")) {
+  if (finalModels.includes("us.anthropic.claude-sonnet-5") || finalModels.includes("anthropic.claude-sonnet-5") || lower.includes("bedrock")) {
     reasonParts.push("AWS Bedrock Claude with Gemini Failover");
   }
 

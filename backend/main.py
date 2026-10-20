@@ -62,20 +62,18 @@ def get_bedrock_client():
 bedrock_client = get_bedrock_client()
 
 def get_bedrock_candidates(model_id: str, region: str = "us-east-1") -> List[str]:
-    geo_prefix = "eu." if region.startswith("eu-") else "apac." if region.startswith("ap-") else "us."
     candidates = []
     if model_id.startswith(("us.", "eu.", "apac.", "arn:aws:")):
         candidates.append(model_id)
+        # Also test without prefix as secondary candidate
+        raw_id = model_id.split(".", 1)[-1]
+        candidates.append(raw_id)
     else:
-        # Cross-region inference profiles required by AWS Bedrock for newer on-demand models
+        geo_prefix = "eu." if region.startswith("eu-") else "apac." if region.startswith("ap-") else "us."
         candidates.append(f"{geo_prefix}{model_id}")
         if geo_prefix != "us.":
             candidates.append(f"us.{model_id}")
         candidates.append(model_id)
-
-    # Active on-demand base models on Bedrock
-    candidates.append("anthropic.claude-sonnet-5")
-    candidates.append("anthropic.claude-haiku-4-5-20251001-v1:0")
 
     # Deduplicate while preserving order
     seen = set()
@@ -94,19 +92,21 @@ def run_agent_with_fallback(
 ) -> str:
     """
     Priority 1: Executes via AWS Bedrock API (with inference profile support).
-    Priority 2: On exception/failure, fails over seamlessly to Google ADK Gemini.
+    Priority 2: [TEMPORARILY COMMENTED OUT FOR ACCURATE AWS BEDROCK TESTING AS DIRECTED BY USER]
     """
     region = os.getenv("AWS_REGION", "us-east-1")
     candidates = get_bedrock_candidates(bedrock_model_id, region)
     
     payload = {
         "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": 65,536,
+        "max_tokens": 4096,
         "messages": [{"role": "user", "content": prompt}]
     }
 
+    last_err = None
     for candidate in candidates:
         try:
+            logger.info(f"[Bedrock Execution] 🚀 Invoking {candidate}...")
             response = bedrock_client.invoke_model(
                 modelId=candidate,
                 body=json.dumps(payload),
@@ -119,18 +119,37 @@ def run_agent_with_fallback(
                 logger.info(f"✅ AWS Bedrock succeeded with {candidate}")
                 return text
         except Exception as err:
-            logger.info(f"Bedrock candidate {candidate} note ({type(err).__name__}). Trying next candidate or failover...")
+            last_err = err
+            err_msg = str(err)
+            err_type = type(err).__name__
+            if "use case" in err_msg.lower() or "not available for this account" in err_msg.lower():
+                logger.warning(f"⏳ [Anthropic Use Case Status] Form submitted; awaiting AWS confirmation/activation for {candidate}: {err_type} - {err_msg}")
+            elif "too many tokens per day" in err_msg.lower() or "throttling" in err_type.lower():
+                logger.warning(f"⚠️ [AWS Bedrock Quota Limit] Daily token limit (TPD) reached for {candidate}: {err_type} - {err_msg}")
+            else:
+                logger.warning(f"🔍 [Bedrock Diagnostic] Candidate {candidate} returned: {err_type} - {err_msg}")
             continue
 
-    logger.info(f"Triggering Google ADK Gemini Failover ({gemini_fallback_model})...")
-    # Failover to Google ADK Agent execution
-    return adk_agent_instance.run(prompt)
+    # [TEMPORARILY COMMENTED OUT FOR ACCURATE AWS BEDROCK TESTING AS DIRECTED BY USER]
+    # logger.info(f"Triggering Google ADK Gemini Failover ({gemini_fallback_model})...")
+    # return adk_agent_instance.run(prompt)
 
-# Model ID Constants
-ORCHESTRATOR_PRIMARY = "anthropic.claude-sonnet-5"
+    raise HTTPException(
+        status_code=502,
+        detail=f"AWS Bedrock execution failed for candidates {candidates}: {type(last_err).__name__} - {last_err}. (Failover models commented out for Bedrock testing as instructed)"
+    )
+
+# Model ID Constants - Updated with us. cross-region inference profile IDs per AWS Bedrock specification
+ORCHESTRATOR_PRIMARY = "us.anthropic.claude-sonnet-5"
 ORCHESTRATOR_FAILOVER = "gemini-3.5-pro"
 
-SUB_AGENT_PRIMARY = "anthropic.claude-haiku-4-5-20251001-v1:0"
+RESEARCHER_PRIMARY = "us.anthropic.claude-sonnet-5"
+RESEARCHER_FAILOVER = "gemini-3.5-flash"
+
+PRODUCT_OWNER_PRIMARY = "us.anthropic.claude-sonnet-5"
+PRODUCT_OWNER_FAILOVER = "gemini-3.5-flash"
+
+SUB_AGENT_PRIMARY = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
 SUB_AGENT_FAILOVER = "gemini-3.5-flash"
 
 # Guardrail banned tokens definition
@@ -161,7 +180,7 @@ def sanitize_and_audit(content: str, agent_name: str) -> str:
 # ==============================================================================
 
 researcher_agent = Agent(
-    model=ORCHESTRATOR_PRIMARY,
+    model=RESEARCHER_PRIMARY,
     name="researcher_agent",
     description="Domain context and technical constraint researcher.",
     instruction="""
@@ -176,11 +195,11 @@ researcher_agent = Agent(
 )
 
 agent_1_vision = Agent(
-    model=SUB_AGENT_PRIMARY,
+    model=PRODUCT_OWNER_PRIMARY,
     name="agent_1_vision",
     description="Defines product vision, personas, and non-goals.",
     instruction="""
-    ROLE: Vision & Scope Lead.
+    ROLE: Vision & Scope Lead (Product Owner).
     RESPONSIBILITY: Transform the Context Dossier into a crisp Product Vision.
     RESTRICTIONS & GUARDRAILS:
     - BANNED TOKENS: "generic user", "TBD", "placeholder", "items", "data".
@@ -299,12 +318,12 @@ async def generate_prd(request: PRDRequest):
     try:
         # Step 1: Research Dossier
         research_prompt = f"Product: {request.product_name}\nBrief: {request.raw_brief}"
-        dossier = run_agent_with_fallback(research_prompt, SUB_AGENT_PRIMARY, SUB_AGENT_FAILOVER, researcher_agent)
+        dossier = run_agent_with_fallback(research_prompt, RESEARCHER_PRIMARY, RESEARCHER_FAILOVER, researcher_agent)
         dossier = sanitize_and_audit(dossier, "researcher_agent")
 
         # Step 2: Vision & Scope
         vision_prompt = f"Product: {request.product_name}\nContext Dossier:\n{dossier}"
-        vision = run_agent_with_fallback(vision_prompt, SUB_AGENT_PRIMARY, SUB_AGENT_FAILOVER, agent_1_vision)
+        vision = run_agent_with_fallback(vision_prompt, PRODUCT_OWNER_PRIMARY, PRODUCT_OWNER_FAILOVER, agent_1_vision)
         vision = sanitize_and_audit(vision, "agent_1_vision")
 
         # Step 3: Requirements (Gherkin Given-When-Then)

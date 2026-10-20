@@ -12,6 +12,6 @@ services:
       - key: DYNAMODB_TABLE_NAME
         value: DigitanoProjects
       - key: BEDROCK_MODEL_ID
-        value: anthropic.claude-sonnet-4-6
+        value: us.anthropic.claude-sonnet-5
       - key: BEDROCK_MODEL_2_ID
-        value: anthropic.claude-3-5-sonnet-20241022-v2:0
+        value: us.anthropic.claude-haiku-4-5-20251001-v1:0

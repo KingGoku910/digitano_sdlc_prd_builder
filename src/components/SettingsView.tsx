@@ -22,8 +22,8 @@ const SECURE_ENV_TEMPLATES = [
   { key: "AWS_REGION", value: "us-east-1", note: "Primary AWS Region (Bedrock + DynamoDB)" },
   { key: "AWS_ACCESS_KEY_ID", value: "AKIA5RURABIWRXNTZAMQ", note: "Boto3 IAM Access Key for Bedrock & DynamoDB" },
   { key: "AWS_SECRET_ACCESS_KEY", value: "[STORED_IN_SERVER_ENV_VARS]", note: "40-char IAM Secret Key (Guarded Server-Side)" },
-  { key: "BEDROCK_MODEL_ID", value: "anthropic.claude-sonnet-5", note: "Orchestrator, Researcher & Product Owner Model (Priority #1)" },
-  { key: "BEDROCK_MODEL_2_ID", value: "anthropic.claude-haiku-4-5-20251001-v1:0", note: "Rest of Agents Model (Priority #1)" },
+  { key: "BEDROCK_MODEL_ID", value: "us.anthropic.claude-sonnet-5", note: "Orchestrator, Researcher & Product Owner Model (Priority #1)" },
+  { key: "BEDROCK_MODEL_2_ID", value: "us.anthropic.claude-haiku-4-5-20251001-v1:0", note: "Rest of Agents Model (Priority #1)" },
   { key: "GEMINI_API_KEY", value: "[STORED_IN_SERVER_ENV_VARS]", note: "Google GenAI 3.5+ Flash Failover Key" },
   { key: "DYNAMODB_TABLE_NAME", value: "DigitanoProjects", note: "Single-Table Partition Store" },
   { key: "COGNITO_USER_POOL_ID", value: "us-east-1_Gx1XLOLRJ", note: "Cognito User Pool ID" },
@@ -441,12 +441,12 @@ export function SettingsView() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono pt-1">
             <div className="p-2 rounded-lg bg-[#131924] border border-[#1E293B]">
               <span className="text-indigo-400 font-semibold">Orchestrator, Researcher &amp; Product Owner:</span>
-              <div className="text-slate-300 mt-0.5">Priority 1: Bedrock <span className="text-cyan-300">anthropic.claude-sonnet-5</span></div>
+              <div className="text-slate-300 mt-0.5">Priority 1: Bedrock <span className="text-cyan-300">us.anthropic.claude-sonnet-5</span></div>
               <div className="text-slate-400 text-[10px]">Failover: Google ADK <span className="text-emerald-400">gemini-3.5-pro</span></div>
             </div>
             <div className="p-2 rounded-lg bg-[#131924] border border-[#1E293B]">
               <span className="text-cyan-400 font-semibold">Rest of the Agents (Requirements, Architecture, UI/UX, Risks, Metrics):</span>
-              <div className="text-slate-300 mt-0.5">Priority 1: Bedrock <span className="text-cyan-300">anthropic.claude-haiku-4-5-20251001-v1:0</span></div>
+              <div className="text-slate-300 mt-0.5">Priority 1: Bedrock <span className="text-cyan-300">us.anthropic.claude-haiku-4-5-20251001-v1:0</span></div>
               <div className="text-slate-400 text-[10px]">Failover: Google ADK <span className="text-emerald-400">gemini-3.5-flash</span></div>
             </div>
           </div>

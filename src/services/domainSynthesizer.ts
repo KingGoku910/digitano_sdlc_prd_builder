@@ -922,7 +922,7 @@ ${profile.stories.map((s) => `| **${s.id}** | ${s.given} | ${s.when} | ${s.then}
 
 ## 12. Risks and Open Questions
 
-| Type | Item | Owner | Mitigation Strategy |
+| Type | Risk Factor | Owner | Mitigation Strategy |
 | :--- | :--- | :--- | :--- |
 | **Risk** | LLM vision token consumption costs during peak usage bursts | Principal Architect | Pre-compress uploaded images to max 1024x1024 before model dispatch |
 | **Risk** | Upstream cloud rate limits during community viral spikes | DevOps Engineer | Dual-engine failover circuit between Bedrock Claude Sonnet 5 and ${profile.aiFailoverModel} |
@@ -1374,7 +1374,7 @@ The platform's APIs execute in a strict chronological sequence mirroring the use
   "outfitId": "outfit_8942a1bc",
   "aiStyleScore": 8.7,
   "aiCritique": "The tailored velvet blazer and structured satin lapel create a striking, sophisticated silhouette ideal for an evening wedding reception. Swapping the silver cuff for minimal platinum accents would elevate the monochrome cohesion even further.",
-  "engineUsed": "AWS Bedrock (anthropic.claude-sonnet-5)",
+  "engineUsed": "AWS Bedrock (us.anthropic.claude-sonnet-5)",
   "failoverEngaged": false
 }
 \`\`\`

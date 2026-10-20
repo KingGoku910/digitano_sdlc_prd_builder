@@ -89,7 +89,7 @@ export function AgentPerformanceChart({ agents, isFinished }: AgentPerformanceCh
       role: agent.role,
       status: agent.status,
       engineUsed: agent.engineUsed || (isBedrock ? (["orchestrator_agent", "researcher_agent", "agent_1_vision", "agent_01", "agent_07"].includes(agent.id) ? "AWS Bedrock (Claude Sonnet 5)" : "AWS Bedrock (Claude Haiku 4.5)") : "Claude Protocol"),
-      modelId: agent.modelInfo?.modelId || (["orchestrator_agent", "researcher_agent", "agent_1_vision", "agent_01", "agent_07"].includes(agent.id) ? "anthropic.claude-sonnet-5" : "anthropic.claude-haiku-4-5-20251001-v1:0"),
+      modelId: agent.modelInfo?.modelId || (["orchestrator_agent", "researcher_agent", "agent_1_vision", "agent_01", "agent_07"].includes(agent.id) ? "us.anthropic.claude-sonnet-5" : "us.anthropic.claude-haiku-4-5-20251001-v1:0"),
       durationMs,
       durationSec: (durationMs / 1000).toFixed(2),
       tokenCount: estTokens,

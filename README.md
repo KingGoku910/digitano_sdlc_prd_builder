@@ -57,7 +57,7 @@ digitano-builder/
 - **Amazon DynamoDB Table**: `DigitanoProjects` (On-Demand billing)
   - **Partition Key (PK)**: `USER#<cognito_sub_id>`
   - **Sort Key (SK)**: `PROJECT#<project_id>`
-- **Primary AI Reasoning Engine**: AWS Bedrock (`anthropic.claude-3-5-sonnet-20240620-v1:0`)
+- **Primary AI Reasoning Engine**: AWS Bedrock (`us.anthropic.claude-sonnet-5` for Orchestrator, Researcher, Product Owner; `us.anthropic.claude-haiku-4-5-20251001-v1:0` for Sub-Agents)
 - **Automated Failover Engine**: Google Gemini Flash API (`google-generativeai`)
 
 ---
