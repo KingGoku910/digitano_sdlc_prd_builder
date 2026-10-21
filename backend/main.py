@@ -44,6 +44,14 @@ class AgentInvokeRequest(BaseModel):
     systemInstruction: Optional[str] = None
     customCredentials: Optional[Dict[str, Any]] = None
 
+@app.get("/")
+def root():
+    return {
+        "service": "Digitano Google ADK Multi-Agent SDLC Backend",
+        "status": "online",
+        "endpoints": ["/api/health", "/api/ping", "/api/generate-prd", "/api/bedrock/invoke"]
+    }
+
 @app.get("/api/health")
 def health():
     return {
