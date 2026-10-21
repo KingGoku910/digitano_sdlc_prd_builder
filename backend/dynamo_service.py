@@ -57,7 +57,7 @@ def put_project(
     custom_credentials: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     """
-    Persists a complete 7-agent SDLC specification into DynamoDB under the user's partition.
+    Persists a complete 8-agent SDLC specification into DynamoDB under the user's partition.
     """
     clean_email = user_email.strip().lower()
     pk = f"USER#{clean_email}"

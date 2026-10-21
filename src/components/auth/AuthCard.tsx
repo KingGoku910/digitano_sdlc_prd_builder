@@ -25,9 +25,10 @@ import {
 interface AuthCardProps {
   onSuccess?: () => void;
   onBackToHome?: () => void;
+  sessionExpiredNotice?: string | null;
 }
 
-export function AuthCard({ onSuccess, onBackToHome }: AuthCardProps) {
+export function AuthCard({ onSuccess, onBackToHome, sessionExpiredNotice }: AuthCardProps) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
   const [confirmationCode, setConfirmationCode] = useState("");
@@ -241,8 +242,8 @@ export function AuthCard({ onSuccess, onBackToHome }: AuthCardProps) {
             {isVerifyingCode
               ? `Enter the confirmation code AWS Cognito sent to ${email}`
               : isSignUp
-              ? "Register with AWS Cognito to deploy your 7-agent AI Scrum team."
-              : "Sign in to deploy your 7-agent AI Scrum team."}
+              ? "Register with AWS Cognito to deploy your 8-agent autonomous cluster."
+              : "Sign in to deploy your 8-agent autonomous cluster."}
           </p>
         </div>
 
@@ -290,6 +291,17 @@ export function AuthCard({ onSuccess, onBackToHome }: AuthCardProps) {
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Session Inactivity Timeout Alert */}
+        {sessionExpiredNotice && !error && (
+          <div className="mb-5 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/40 flex items-start gap-2.5 text-amber-300 text-xs shadow-lg shadow-amber-950/20">
+            <AlertCircle className="w-4 h-4 shrink-0 text-amber-400 mt-0.5" />
+            <div className="flex-1 space-y-0.5">
+              <span className="font-semibold block">Session Timeout</span>
+              <span className="text-amber-200/90 leading-relaxed block">{sessionExpiredNotice}</span>
             </div>
           </div>
         )}

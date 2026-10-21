@@ -60,8 +60,8 @@ const STORAGE_KEYS = {
   INACTIVITY_TIMEOUT_MINUTES: "digitano_inactivity_limit",
 };
 
-// Default inactivity timeout: 20 minutes (configurable between 15-30 mins)
-export const DEFAULT_INACTIVITY_LIMIT_MS = 20 * 60 * 1000;
+// Default inactivity timeout: 15 minutes strict inactivity logout control
+export const DEFAULT_INACTIVITY_LIMIT_MS = 15 * 60 * 1000;
 
 /**
  * Records user activity timestamp and sets a session cookie.
@@ -70,12 +70,12 @@ export function recordUserActivity(): void {
   if (typeof window === "undefined") return;
   const now = Date.now();
   localStorage.setItem(STORAGE_KEYS.LAST_ACTIVITY, now.toString());
-  // Write secure session cookie
-  document.cookie = `digitano_session=active; path=/; max-age=1800; SameSite=Strict`;
+  // Write secure session cookie (15 minutes)
+  document.cookie = `digitano_session=active; path=/; max-age=900; SameSite=Strict`;
 }
 
 /**
- * Checks whether user session has timed out due to inactivity (15-30 minutes).
+ * Checks whether user session has timed out due to 15 minutes of inactivity.
  */
 export function isSessionExpiredDueToInactivity(): boolean {
   if (typeof window === "undefined") return false;
@@ -83,8 +83,10 @@ export function isSessionExpiredDueToInactivity(): boolean {
   if (!lastActiveStr) return false;
 
   const lastActive = parseInt(lastActiveStr, 10);
-  const customLimitMinutes = parseInt(localStorage.getItem(STORAGE_KEYS.INACTIVITY_TIMEOUT_MINUTES) || "20", 10);
-  const timeoutMs = (customLimitMinutes || 20) * 60 * 1000;
+  if (isNaN(lastActive)) return false;
+
+  const customLimitMinutes = parseInt(localStorage.getItem(STORAGE_KEYS.INACTIVITY_TIMEOUT_MINUTES) || "15", 10);
+  const timeoutMs = (customLimitMinutes || 15) * 60 * 1000;
 
   return Date.now() - lastActive > timeoutMs;
 }
@@ -284,6 +286,7 @@ export function saveTokens(tokens: AuthTokens) {
   } else {
     localStorage.removeItem(STORAGE_KEYS.IS_DEMO);
   }
+  recordUserActivity();
 }
 
 /**

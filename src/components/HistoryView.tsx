@@ -192,7 +192,7 @@ export function HistoryView({ onSelectProject, onNewProject }: HistoryViewProps)
           <div>
             <h3 className="text-base font-semibold text-white">No Projects Saved Yet</h3>
             <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
-              Start by describing your project vision in the brief canvas. The 7-agent team will generate your specifications and link them to your account: <strong className="text-cyan-300">{activeEmail}</strong>.
+              Start by describing your project vision in the brief canvas. The 8-agent cluster will generate your specifications and link them to your account: <strong className="text-cyan-300">{activeEmail}</strong>.
             </p>
           </div>
           <button

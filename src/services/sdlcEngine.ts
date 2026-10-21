@@ -222,8 +222,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "Context Dossier with competitor benchmarks, active library standards, and gateway constraints passed to Vision Lead.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude Sonnet 5 / Gemini 3.5 Flash",
-      modelId: "us.anthropic.claude-sonnet-5",
+      modelName: "Anthropic Claude Sonnet 4.6",
+      modelId: "anthropic.claude-sonnet-4-6",
       provider: "Google ADK & AWS Bedrock (MCP GoogleSearchTool Enabled)",
       reasoningType: "Technical & Market Research via MCP Tools",
     },
@@ -235,8 +235,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "Product Vision & Scope Specification passed to Requirements Engineer.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude Sonnet 5 / Gemini 3.5 Flash",
-      modelId: "us.anthropic.claude-sonnet-5",
+      modelName: "Anthropic Claude Sonnet 4.6",
+      modelId: "anthropic.claude-sonnet-4-6",
       provider: "AWS Bedrock & Google ADK",
       reasoningType: "Vision & Scope Engineering",
     },
@@ -248,8 +248,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "Gherkin Requirements Specification passed to Systems Architect.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude Haiku 4.5 / Gemini 3.5 Flash",
-      modelId: "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+      modelName: "Anthropic Claude Haiku 4.5",
+      modelId: "anthropic.claude-haiku-4-5-20251001-v1:0",
       provider: "AWS Bedrock & Google ADK",
       reasoningType: "Gherkin Acceptance Criteria Engineering",
     },
@@ -261,8 +261,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "Technical Systems Architecture & DDL Schemas passed to UX/UI Designer.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude Haiku 4.5 / Gemini 3.5 Flash",
-      modelId: "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+      modelName: "Anthropic Claude Haiku 4.5",
+      modelId: "anthropic.claude-haiku-4-5-20251001-v1:0",
       provider: "AWS Bedrock & Google ADK",
       reasoningType: "Systems Architecture & DDL Design",
     },
@@ -274,8 +274,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "UX/UI Design System & 4-State Matrix passed to Security & Risk Officer.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude Haiku 4.5 / Gemini 3.5 Flash",
-      modelId: "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+      modelName: "Anthropic Claude Haiku 4.5",
+      modelId: "anthropic.claude-haiku-4-5-20251001-v1:0",
       provider: "AWS Bedrock & Google ADK",
       reasoningType: "Visual Layout & 4-State Matrix Synthesis",
     },
@@ -287,8 +287,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "Security & Compliance Specification passed to Telemetry Strategist.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude Haiku 4.5 / Gemini 3.5 Flash",
-      modelId: "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+      modelName: "Anthropic Claude Haiku 4.5",
+      modelId: "anthropic.claude-haiku-4-5-20251001-v1:0",
       provider: "AWS Bedrock & Google ADK",
       reasoningType: "Zero-Trust Security & Regulatory Compliance",
     },
@@ -300,8 +300,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "Telemetry KPIs & Release Roadmap passed to Master Orchestrator.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude Haiku 4.5 / Gemini 3.5 Flash",
-      modelId: "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+      modelName: "Anthropic Claude Haiku 4.5",
+      modelId: "anthropic.claude-haiku-4-5-20251001-v1:0",
       provider: "AWS Bedrock & Google ADK",
       reasoningType: "Telemetry KPIs & Release Milestone Engineering",
     },
@@ -313,8 +313,8 @@ export const AGENT_SPECS: Record<
       deliverablesProduced: "Master Publication-Ready PRD Suite & Quality Audit Certificate.",
     },
     defaultModel: {
-      modelName: "Anthropic Claude Sonnet 5 / Gemini 3.5 Pro",
-      modelId: "us.anthropic.claude-sonnet-5",
+      modelName: "Anthropic Claude Sonnet 4.6",
+      modelId: "anthropic.claude-sonnet-4-6",
       provider: "AWS Bedrock & Google ADK",
       reasoningType: "Master Synthesis & Quality Gate Audit",
     },
@@ -479,16 +479,16 @@ export async function executeAgentReasoning(
     (agentName || "").toLowerCase().includes("vision");
 
   const defaultAgentModelId = isSonnetAgent
-    ? "us.anthropic.claude-sonnet-5"
-    : "us.anthropic.claude-haiku-4-5-20251001-v1:0";
+    ? "anthropic.claude-sonnet-4-6"
+    : "anthropic.claude-haiku-4-5-20251001-v1:0";
   const defaultAgentModelName = isSonnetAgent
-    ? "Anthropic Claude Sonnet 5"
+    ? "Anthropic Claude Sonnet 4.6"
     : "Anthropic Claude Haiku 4.5";
 
-  const rawModel1 = (savedSettings.bedrockModelId || "us.anthropic.claude-sonnet-5").trim();
-  const rawModel2 = (savedSettings.bedrockModel2Id || "us.anthropic.claude-haiku-4-5-20251001-v1:0").trim();
-  const modelId = isSonnetAgent ? (rawModel1 || "us.anthropic.claude-sonnet-5") : defaultAgentModelId;
-  const model2Id = rawModel2 || "us.anthropic.claude-haiku-4-5-20251001-v1:0";
+  const rawModel1 = (savedSettings.bedrockModelId || "anthropic.claude-sonnet-4-6").trim();
+  const rawModel2 = (savedSettings.bedrockModel2Id || "anthropic.claude-haiku-4-5-20251001-v1:0").trim();
+  const modelId = isSonnetAgent ? (rawModel1 || "anthropic.claude-sonnet-4-6") : defaultAgentModelId;
+  const model2Id = rawModel2 || "anthropic.claude-haiku-4-5-20251001-v1:0";
   const geminiApiKey = (savedSettings.geminiApiKey || "").trim();
   const geminiApi2Key = (savedSettings.geminiApi2Key || "").trim();
   const geminiApi3Key = (savedSettings.geminiApi3Key || "").trim();
@@ -739,10 +739,7 @@ export async function runAgentPipeline(
   let completedCount = 0;
   const agentOutputs: Record<string, string> = {};
 
-  for (let i = 0; i < agentDefs.length; i++) {
-    const def = agentDefs[i];
-
-    // Set THINKING
+  async function executeSingleAgentDef(def: (typeof agentDefs)[0]) {
     const thinkingLogs = [
       `01 [${def.tag}] Initializing ${def.name} agent...`,
       `02 [${def.tag}] Ingesting upstream context memory for "${projectTitle}"...`,
@@ -766,10 +763,8 @@ export async function runAgentPipeline(
       completedCount
     );
 
-    // Realistic processing delay for streaming visualization
-    await new Promise((r) => setTimeout(r, 600));
+    await new Promise((r) => setTimeout(r, 350));
 
-    // Construct highly focused, bespoke prompt for this agent based on the user's project
     let agentTaskPrompt = "";
     let systemInstruction = `You are ${def.name} (${def.role}) on an elite Google ADK 8-agent SDLC engineering team. Strict guardrails: You are strictly forbidden from using banned generic tokens ("item", "items", "data", "record", "ProjectRecord", "/api/items", "TBD", "placeholder", "etc."). Focus 100% on the user's specific application.`;
 
@@ -869,7 +864,6 @@ Execute Master Synthesis & Quality Gate Audit:
     }
 
     const agentStartTime = performance.now();
-    // Execute reasoning with Dual-LLM Engine (AWS Bedrock Claude Sonnet / Gemini Models)
     const reasoningResult = await executeAgentReasoning(
       agentTaskPrompt,
       systemInstruction,
@@ -898,8 +892,8 @@ Execute Master Synthesis & Quality Gate Audit:
       def.id === "agent_01" ||
       def.id === "agent_07";
     const agentDefaultModelId = isSonnetAgentCurrent
-      ? "us.anthropic.claude-sonnet-5"
-      : "us.anthropic.claude-haiku-4-5-20251001-v1:0";
+      ? "anthropic.claude-sonnet-4-6"
+      : "anthropic.claude-haiku-4-5-20251001-v1:0";
 
     const metrics = {
       durationMs,
@@ -912,7 +906,6 @@ Execute Master Synthesis & Quality Gate Audit:
       timestamp: new Date().toLocaleTimeString(),
     };
 
-    // Set COMPLETE with detailed logs
     const completeLogs = [
       ...thinkingLogs,
       `04 [${def.tag}] Executing reasoning via ${engineUsed}...`,
@@ -946,9 +939,39 @@ Execute Master Synthesis & Quality Gate Audit:
       },
       completedCount
     );
-
-    await new Promise((r) => setTimeout(r, 200));
   }
+
+  // STAGE 1: Technical & Market Researcher (Sequential - Ingests Brief)
+  await executeSingleAgentDef(agentDefs[0]);
+
+  // STAGE 2: 6 SDLC Technical Agents in Parallel (Simultaneous Tab Updates)
+  const stage2Agents = agentDefs.slice(1, 7);
+  stage2Agents.forEach((def) => {
+    const spec = AGENT_SPECS[def.id];
+    onAgentUpdate(
+      {
+        id: def.id,
+        name: def.name,
+        tag: def.tag,
+        number: def.number,
+        role: def.role,
+        status: "thinking",
+        logs: [
+          `01 [${def.tag}] Initializing ${def.name} agent in parallel cluster...`,
+          `02 [${def.tag}] Consuming Context Dossier from Researcher...`,
+          `03 [${def.tag}] Synthesizing domain requirements concurrently...`,
+        ],
+        taskHandoff: spec?.handoff,
+        modelInfo: spec?.defaultModel,
+      },
+      completedCount
+    );
+  });
+
+  await Promise.all(stage2Agents.map((def) => executeSingleAgentDef(def)));
+
+  // STAGE 3: Master Orchestrator (Sequential - Assembles Final Artifacts)
+  await executeSingleAgentDef(agentDefs[7]);
 
   // Synthesize the 5 Canonical Deliverables requested by user
   const resOutput = agentOutputs["researcher_agent"] || "";

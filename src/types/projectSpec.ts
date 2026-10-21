@@ -163,9 +163,9 @@ export const AI_MODELS_CATALOG: AIModelOption[] = [
   { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro (2M Context)", manufacturer: "Google", badge: "Long Context" },
   { id: "gemma-2-27b", name: "Gemma 2 (Open Weights)", manufacturer: "Google", badge: "Edge / Open" },
 
-  // Anthropic (Bedrock Inference Profiles)
-  { id: "us.anthropic.claude-sonnet-5", name: "Claude Sonnet 5", manufacturer: "Anthropic", badge: "Lead Agent & Architecture" },
-  { id: "us.anthropic.claude-haiku-4-5-20251001-v1:0", name: "Claude Haiku 4.5", manufacturer: "Anthropic", badge: "Near-Frontier Agentic" },
+  // Anthropic (Google ADK & Bedrock Profiles)
+  { id: "anthropic.claude-sonnet-4-6", name: "Claude Sonnet 4.6", manufacturer: "Anthropic", badge: "Tier 1: Research & Orchestrator" },
+  { id: "anthropic.claude-haiku-4-5-20251001-v1:0", name: "Claude Haiku 4.5", manufacturer: "Anthropic", badge: "Tier 2: 6 SDLC Technical Agents" },
 
   // OpenAI
   { id: "gpt-4o", name: "GPT-4o (Omni)", manufacturer: "OpenAI", badge: "Multimodal Leader" },

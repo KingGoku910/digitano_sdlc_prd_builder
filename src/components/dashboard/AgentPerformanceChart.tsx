@@ -88,8 +88,8 @@ export function AgentPerformanceChart({ agents, isFinished }: AgentPerformanceCh
       number: agent.number,
       role: agent.role,
       status: agent.status,
-      engineUsed: agent.engineUsed || (isBedrock ? (["orchestrator_agent", "researcher_agent", "agent_1_vision", "agent_01", "agent_07"].includes(agent.id) ? "AWS Bedrock (Claude Sonnet 5)" : "AWS Bedrock (Claude Haiku 4.5)") : "Claude Protocol"),
-      modelId: agent.modelInfo?.modelId || (["orchestrator_agent", "researcher_agent", "agent_1_vision", "agent_01", "agent_07"].includes(agent.id) ? "us.anthropic.claude-sonnet-5" : "us.anthropic.claude-haiku-4-5-20251001-v1:0"),
+      engineUsed: agent.engineUsed || (["orchestrator_agent", "researcher_agent", "agent_1_vision", "agent_01", "agent_07"].includes(agent.id) ? "Google ADK (Claude Sonnet 4.6)" : "Google ADK (Claude Haiku 4.5)"),
+      modelId: agent.modelInfo?.modelId || (["orchestrator_agent", "researcher_agent", "agent_1_vision", "agent_01", "agent_07"].includes(agent.id) ? "anthropic.claude-sonnet-4-6" : "anthropic.claude-haiku-4-5-20251001-v1:0"),
       durationMs,
       durationSec: (durationMs / 1000).toFixed(2),
       tokenCount: estTokens,
@@ -239,7 +239,7 @@ export function AgentPerformanceChart({ agents, isFinished }: AgentPerformanceCh
           <div>
             <span className="text-[10px] font-mono text-slate-500 uppercase">Primary Protocol</span>
             <div className="text-xs font-semibold text-slate-200 mt-0.5 truncate">
-              Claude Sonnet
+              Claude Sonnet 4.6 &amp; Haiku 4.5
             </div>
           </div>
           <Cpu className="w-4 h-4 text-purple-400/60" />
@@ -258,8 +258,8 @@ export function AgentPerformanceChart({ agents, isFinished }: AgentPerformanceCh
               <div className="border-b border-cyan-500/30 w-full" />
             </div>
 
-            {/* 7 Agent Bars */}
-            <div className="relative grid grid-cols-7 gap-2 sm:gap-4 items-end min-h-[170px]">
+            {/* 8 Agent Bars */}
+            <div className="relative grid grid-cols-4 sm:grid-cols-8 gap-2 sm:gap-3 items-end min-h-[170px]">
               {agentMetrics.map((m, idx) => {
                 const metric = getMetricValue(m);
                 const pct = Math.min(100, Math.max(12, Math.round((metric.val / (metric.max || 1)) * 100)));
@@ -381,7 +381,7 @@ export function AgentPerformanceChart({ agents, isFinished }: AgentPerformanceCh
                 <span>Hover over any agent bar to inspect detailed hardware performance metrics</span>
               </span>
               <span className="text-cyan-400 hidden sm:inline">
-                Dual-LLM Engine: AWS Bedrock &bull; Claude Sonnet
+                Dual-Tier ADK Engine: Claude Sonnet 4.6 &bull; Claude Haiku 4.5
               </span>
             </div>
           )}

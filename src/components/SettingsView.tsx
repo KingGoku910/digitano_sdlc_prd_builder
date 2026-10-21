@@ -72,8 +72,8 @@ export function SettingsView() {
         setServerHealth({
           status: data.status || "online",
           runtime: data.runtime || data.service || "FastAPI / Python 3.10 Engine",
-          primaryModel: data.primaryModel || "AWS Bedrock (Claude Sonnet)",
-          failoverModel: data.failoverModel || "Google Gemini 3.5+ Flash",
+          primaryModel: data.primaryModel || "Anthropic Claude Sonnet 4.6 (ADK Tier 1)",
+          failoverModel: data.failoverModel || "Anthropic Claude Haiku 4.5 (ADK Tier 2)",
           latencyMs: latency,
         });
       } else {
@@ -245,10 +245,10 @@ export function SettingsView() {
           <div className="p-3.5 rounded-xl bg-[#0B0F17] border border-[#1E293B]/80 space-y-1">
             <span className="text-[10px] font-mono text-slate-500 uppercase">Primary Reasoning Model</span>
             <div className="text-xs font-semibold text-slate-200">
-              AWS Bedrock (Claude Sonnet 5 &amp; Claude Haiku 4.5)
+              Anthropic Claude Sonnet 4.6 &amp; Claude Haiku 4.5
             </div>
             <div className="text-[11px] font-mono text-cyan-300">
-              anthropic.claude-sonnet-5 / anthropic.claude-haiku-4-5-20251001-v1:0
+              anthropic.claude-sonnet-4-6 / anthropic.claude-haiku-4-5-20251001-v1:0
             </div>
           </div>
 

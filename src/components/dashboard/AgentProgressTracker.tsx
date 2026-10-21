@@ -298,7 +298,7 @@ export function AgentProgressTracker({
             <div className="p-2.5 rounded-xl bg-[#0B0F17]/80 border border-[#1E293B]">
               <span className="text-[10px] text-slate-400 font-mono block">AI Strategy &amp; Models</span>
               <span className="font-semibold text-emerald-300 truncate block mt-0.5">
-                {specInputs?.aiIntegration?.models?.join(", ") || "Claude Sonnet 5 & Haiku 4.5"} ({specInputs?.aiIntegration?.agentMode || "Multi-Agent"})
+                {specInputs?.aiIntegration?.models?.join(", ") || "Claude Sonnet 4.6 & Haiku 4.5"} ({specInputs?.aiIntegration?.agentMode || "Multi-Agent"})
               </span>
             </div>
           </div>
@@ -326,12 +326,12 @@ export function AgentProgressTracker({
             agent.id === "agent_1_vision" ||
             agent.id === "agent_01" ||
             agent.id === "agent_07";
-          const defaultClaudeName = isSonnetAgent ? "Anthropic Claude Sonnet 5" : "Anthropic Claude Haiku 4.5";
-          const defaultClaudeId = isSonnetAgent ? "us.anthropic.claude-sonnet-5" : "us.anthropic.claude-haiku-4-5-20251001-v1:0";
+          const defaultClaudeName = isSonnetAgent ? "Anthropic Claude Sonnet 4.6" : "Anthropic Claude Haiku 4.5";
+          const defaultClaudeId = isSonnetAgent ? "anthropic.claude-sonnet-4-6" : "anthropic.claude-haiku-4-5-20251001-v1:0";
 
-          const modelName = agent.modelInfo?.modelName || (agent.engineUsed?.includes("Gemini") ? "Google Gemini 3.5 Flash" : defaultClaudeName);
-          const modelId = agent.modelInfo?.modelId || (agent.engineUsed?.includes("Gemini") ? "gemini-3.5-flash" : defaultClaudeId);
-          const provider = agent.modelInfo?.provider || (agent.engineUsed?.includes("Gemini") ? "Google GenAI API" : "AWS Bedrock Runtime (us-east-1)");
+          const modelName = agent.modelInfo?.modelName || defaultClaudeName;
+          const modelId = agent.modelInfo?.modelId || defaultClaudeId;
+          const provider = agent.modelInfo?.provider || "Google ADK (Bedrock SLA Guaranteed)";
 
           return (
             <div
