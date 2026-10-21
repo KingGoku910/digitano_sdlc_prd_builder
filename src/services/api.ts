@@ -6,7 +6,7 @@
 import axios, { AxiosError } from "axios";
 import { getStoredToken } from "../config/aws-cognito";
 
-export const API_BASE_URL = "";
+export const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || "";
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,

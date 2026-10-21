@@ -50,7 +50,7 @@ import {
 const INITIAL_AGENTS: AgentState[] = [
   {
     id: "researcher_agent",
-    name: "Technical Researcher",
+    name: "Research Agent",
     tag: "RES",
     number: "ADK 0",
     role: "Ground Truth & Market Intelligence (MCP GoogleSearchTool)",
@@ -61,10 +61,10 @@ const INITIAL_AGENTS: AgentState[] = [
   },
   {
     id: "agent_1_vision",
-    name: "Vision & Scope Lead",
-    tag: "VIS",
+    name: "Product Owner",
+    tag: "PO",
     number: "ADK 1",
-    role: "Product Vision, Personas & Explicit Non-Goals",
+    role: "User Stories, Acceptance Criteria & MVP Scope",
     status: "pending",
     logs: [],
     taskHandoff: AGENT_SPECS.agent_1_vision.handoff,
@@ -72,10 +72,10 @@ const INITIAL_AGENTS: AgentState[] = [
   },
   {
     id: "agent_2_requirements",
-    name: "Requirements Engineer",
-    tag: "REQ",
+    name: "Solutions Architect",
+    tag: "ARC",
     number: "ADK 2",
-    role: "100% Gherkin Given-When-Then Epics & Quantitative SLAs",
+    role: "Technical Systems Architecture & Component Design",
     status: "pending",
     logs: [],
     taskHandoff: AGENT_SPECS.agent_2_requirements.handoff,
@@ -83,10 +83,10 @@ const INITIAL_AGENTS: AgentState[] = [
   },
   {
     id: "agent_3_architecture",
-    name: "Systems Architect",
-    tag: "ARC",
+    name: "Database Engineer",
+    tag: "DB",
     number: "ADK 3",
-    role: "PostgreSQL DDL Schemas & RESTful OpenAPI Contracts",
+    role: "PostgreSQL DDL Schemas & Relational Data Modeling",
     status: "pending",
     logs: [],
     taskHandoff: AGENT_SPECS.agent_3_architecture.handoff,
@@ -94,10 +94,10 @@ const INITIAL_AGENTS: AgentState[] = [
   },
   {
     id: "agent_4_uiux",
-    name: "Lead UX/UI Designer",
-    tag: "UIX",
+    name: "Fullstack Engineer",
+    tag: "FE",
     number: "ADK 4",
-    role: "Cybernetic Layouts & 4-State Interaction Matrices",
+    role: "Client UI Components & State Management",
     status: "pending",
     logs: [],
     taskHandoff: AGENT_SPECS.agent_4_uiux.handoff,
@@ -105,10 +105,10 @@ const INITIAL_AGENTS: AgentState[] = [
   },
   {
     id: "agent_5_risks",
-    name: "Risk & Compliance Officer",
-    tag: "RSK",
+    name: "Backend Engineer",
+    tag: "BE",
     number: "ADK 5",
-    role: "Zero-Trust Security, AES-256-GCM, GDPR/HIPAA Boundaries",
+    role: "RESTful API Endpoints & Asynchronous Pipelines",
     status: "pending",
     logs: [],
     taskHandoff: AGENT_SPECS.agent_5_risks.handoff,
@@ -116,10 +116,10 @@ const INITIAL_AGENTS: AgentState[] = [
   },
   {
     id: "agent_6_metrics",
-    name: "Telemetry Strategist",
-    tag: "MTR",
+    name: "Software Analyst",
+    tag: "ANL",
     number: "ADK 6",
-    role: "Hard Numerical KPIs & Phased Release Milestones",
+    role: "Code Review, Testing SLAs & Quality Assurance",
     status: "pending",
     logs: [],
     taskHandoff: AGENT_SPECS.agent_6_metrics.handoff,
@@ -127,10 +127,10 @@ const INITIAL_AGENTS: AgentState[] = [
   },
   {
     id: "orchestrator_agent",
-    name: "Master Orchestrator",
+    name: "Orchestrator",
     tag: "ORC",
     number: "ADK 7",
-    role: "Quality Gatekeeper & Master PRD Synthesis",
+    role: "Master Synthesis, Quality Gate & PRD Compilation",
     status: "pending",
     logs: [],
     taskHandoff: AGENT_SPECS.orchestrator_agent.handoff,
@@ -461,13 +461,13 @@ export default function App() {
                       </span>
                       <Terminal className="w-4 h-4 text-cyan-400" />
                     </div>
-                    <h3 className="text-sm font-bold text-white mb-1.5">Technical Researcher</h3>
+                    <h3 className="text-sm font-bold text-white mb-1.5">Research Agent</h3>
                     <p className="text-xs text-slate-400 leading-relaxed mb-3">
                       Equipped with <code className="text-cyan-300">GoogleSearchTool</code> and web crawler to gather real competitor latency benchmarks and library standards.
                     </p>
                   </div>
                   <div className="text-[10px] font-mono text-slate-500 border-t border-[#1E293B] pt-2">
-                    Model: Claude Sonnet 4.6
+                    Model: Claude Sonnet 4.6 (Tier 1)
                   </div>
                 </div>
 
@@ -475,18 +475,18 @@ export default function App() {
                 <div className="p-5 rounded-2xl bg-[#131924] border border-[#1E293B] hover:border-cyan-500/50 transition-all flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between mb-3">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950 text-cyan-400 border border-cyan-800/40">
-                        ADK 1 • TIER 1
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950 text-emerald-400 border border-emerald-800/40">
+                        ADK 1 • TIER 2
                       </span>
-                      <Compass className="w-4 h-4 text-cyan-400" />
+                      <Compass className="w-4 h-4 text-emerald-400" />
                     </div>
-                    <h3 className="text-sm font-bold text-white mb-1.5">Vision &amp; Scope Lead</h3>
+                    <h3 className="text-sm font-bold text-white mb-1.5">Product Owner</h3>
                     <p className="text-xs text-slate-400 leading-relaxed mb-3">
-                      Defines bounded user personas with operational pain points, core value propositions, and strict Out-of-Scope Non-Goals.
+                      Converts research dossier into user stories, acceptance criteria, and bounded MVP feature scope.
                     </p>
                   </div>
                   <div className="text-[10px] font-mono text-slate-500 border-t border-[#1E293B] pt-2">
-                    Model: Claude Sonnet 4.6
+                    Model: Claude Haiku 4.5 (Tier 2)
                   </div>
                 </div>
 
@@ -499,13 +499,13 @@ export default function App() {
                       </span>
                       <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                     </div>
-                    <h3 className="text-sm font-bold text-white mb-1.5">Requirements Engineer</h3>
+                    <h3 className="text-sm font-bold text-white mb-1.5">Solutions Architect</h3>
                     <p className="text-xs text-slate-400 leading-relaxed mb-3">
-                      Converts Vision into epics. Forces 100% of user stories into Given-When-Then Gherkin syntax with quantitative SLAs (p99 &lt; 150ms).
+                      Architects technical systems architecture, component hierarchies, and zero-trust security boundaries.
                     </p>
                   </div>
                   <div className="text-[10px] font-mono text-slate-500 border-t border-[#1E293B] pt-2">
-                    Model: Claude Haiku 4.5
+                    Model: Claude Haiku 4.5 (Tier 2)
                   </div>
                 </div>
 
@@ -518,13 +518,13 @@ export default function App() {
                       </span>
                       <Database className="w-4 h-4 text-emerald-400" />
                     </div>
-                    <h3 className="text-sm font-bold text-white mb-1.5">Systems Architect</h3>
+                    <h3 className="text-sm font-bold text-white mb-1.5">Database Engineer</h3>
                     <p className="text-xs text-slate-400 leading-relaxed mb-3">
-                      Architects PostgreSQL 16 DDL schemas with foreign keys, indexes, and RESTful OpenAPI contracts using explicit domain nouns.
+                      Constructs PostgreSQL DDL schemas, Supabase RLS policies, and relational entity models.
                     </p>
                   </div>
                   <div className="text-[10px] font-mono text-slate-500 border-t border-[#1E293B] pt-2">
-                    Model: Claude Haiku 4.5
+                    Model: Claude Haiku 4.5 (Tier 2)
                   </div>
                 </div>
 
@@ -537,13 +537,13 @@ export default function App() {
                       </span>
                       <Eye className="w-4 h-4 text-emerald-400" />
                     </div>
-                    <h3 className="text-sm font-bold text-white mb-1.5">Lead UX/UI Designer</h3>
+                    <h3 className="text-sm font-bold text-white mb-1.5">Fullstack Engineer</h3>
                     <p className="text-xs text-slate-400 leading-relaxed mb-3">
-                      Synthesizes screen layouts, component hierarchies, design tokens, and explicit 4-state matrices (Default, Hover, Loading, Error).
+                      Builds responsive client UI components, state management hooks, and touch-optimized navigation flows.
                     </p>
                   </div>
                   <div className="text-[10px] font-mono text-slate-500 border-t border-[#1E293B] pt-2">
-                    Model: Claude Haiku 4.5
+                    Model: Claude Haiku 4.5 (Tier 2)
                   </div>
                 </div>
 
@@ -556,13 +556,13 @@ export default function App() {
                       </span>
                       <ShieldCheck className="w-4 h-4 text-emerald-400" />
                     </div>
-                    <h3 className="text-sm font-bold text-white mb-1.5">Risk &amp; Compliance</h3>
+                    <h3 className="text-sm font-bold text-white mb-1.5">Backend Engineer</h3>
                     <p className="text-xs text-slate-400 leading-relaxed mb-3">
-                      Defines Zero-Trust security boundary, AES-256-GCM hardware encryption, OAuth2 PKCE flow, GDPR/HIPAA compliance, and edge cases.
+                      Engineers robust RESTful API endpoints, asynchronous request pipelines, and secure storage integrations.
                     </p>
                   </div>
                   <div className="text-[10px] font-mono text-slate-500 border-t border-[#1E293B] pt-2">
-                    Model: Claude Haiku 4.5
+                    Model: Claude Haiku 4.5 (Tier 2)
                   </div>
                 </div>
 
@@ -575,13 +575,13 @@ export default function App() {
                       </span>
                       <BarChart3 className="w-4 h-4 text-emerald-400" />
                     </div>
-                    <h3 className="text-sm font-bold text-white mb-1.5">Telemetry Strategist</h3>
+                    <h3 className="text-sm font-bold text-white mb-1.5">Software Analyst</h3>
                     <p className="text-xs text-slate-400 leading-relaxed mb-3">
-                      Formulates measurable numerical KPIs (&gt;99.95% uptime) and structures phased MVP release milestones (Alpha, Beta, GA).
+                      Conducts code reviews, verifies testing SLAs, and enforces quality assurance standards.
                     </p>
                   </div>
                   <div className="text-[10px] font-mono text-slate-500 border-t border-[#1E293B] pt-2">
-                    Model: Claude Haiku 4.5
+                    Model: Claude Haiku 4.5 (Tier 2)
                   </div>
                 </div>
 
@@ -590,17 +590,17 @@ export default function App() {
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950 text-cyan-300 border border-cyan-700">
-                        ADK 7 • ORCHESTRATOR
+                        ADK 7 • TIER 1
                       </span>
                       <Cpu className="w-4 h-4 text-cyan-400" />
                     </div>
-                    <h3 className="text-sm font-bold text-white mb-1.5">Master Orchestrator</h3>
+                    <h3 className="text-sm font-bold text-white mb-1.5">Orchestrator</h3>
                     <p className="text-xs text-slate-400 leading-relaxed mb-3">
-                      Executes quality gate audits for banned tokens, validates 100% Gherkin compliance, and synthesizes the publication-ready PRD suite.
+                      Executes quality gate audits for banned tokens, validates Gherkin compliance, and synthesizes the publication-ready PRD suite.
                     </p>
                   </div>
                   <div className="text-[10px] font-mono text-cyan-400 border-t border-[#1E293B] pt-2">
-                    Model: Claude Sonnet 4.6
+                    Model: Claude Sonnet 4.6 (Tier 1)
                   </div>
                 </div>
               </div>

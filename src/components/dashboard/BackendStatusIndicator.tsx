@@ -9,6 +9,7 @@ interface BackendStatusIndicatorProps {
 export function BackendStatusIndicator({ isCollapsed = false }: BackendStatusIndicatorProps) {
   const [status, setStatus] = useState<"online" | "starting" | "offline">("online");
   const [latency, setLatency] = useState<number | null>(4);
+  const [serverInfo, setServerInfo] = useState<string>("Python FastAPI (Render)");
   const [isPinging, setIsPinging] = useState(false);
 
   const checkStatus = async () => {
@@ -17,6 +18,15 @@ export function BackendStatusIndicator({ isCollapsed = false }: BackendStatusInd
       const result = await pingBackendHealth();
       setStatus(result.status);
       setLatency(result.latencyMs);
+      if (result.data) {
+        if (result.data.engine) {
+          setServerInfo(result.data.engine);
+        } else if (result.data.service) {
+          setServerInfo(result.data.service);
+        } else {
+          setServerInfo("Python FastAPI (Render)");
+        }
+      }
     } catch {
       setStatus("offline");
     } finally {
@@ -38,7 +48,7 @@ export function BackendStatusIndicator({ isCollapsed = false }: BackendStatusInd
 
   const tooltipText =
     status === "online"
-      ? `Server Online (${latency !== null ? `${latency}ms latency` : "Active"})`
+      ? `Connected to ${serverInfo} (${latency !== null ? `${latency}ms` : "Active"})`
       : status === "starting"
       ? "Server Starting..."
       : "Server Offline";
@@ -85,9 +95,9 @@ export function BackendStatusIndicator({ isCollapsed = false }: BackendStatusInd
       id="backend-status-indicator"
       className="flex items-center justify-between px-3 py-2 rounded-xl bg-[#0B0F17]/80 border border-[#1E293B] text-xs transition-all"
     >
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-2.5 overflow-hidden">
         {/* Status Dot */}
-        <span className="relative flex h-2.5 w-2.5">
+        <span className="relative flex h-2.5 w-2.5 shrink-0">
           {status === "online" && (
             <>
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10B981] opacity-75"></span>
@@ -106,14 +116,14 @@ export function BackendStatusIndicator({ isCollapsed = false }: BackendStatusInd
         </span>
 
         {/* Status Text */}
-        <div className="flex flex-col">
-          <span className="font-medium text-slate-200">
-            {status === "online" && "Server Online"}
+        <div className="flex flex-col overflow-hidden">
+          <span className="font-medium text-slate-200 truncate">
+            {status === "online" && "Python Backend Online"}
             {status === "starting" && "Server Starting..."}
             {status === "offline" && "Server Offline"}
           </span>
-          <span className="text-[10px] text-slate-500 font-mono">
-            {status === "online" && latency !== null ? `${latency}ms latency` : "Full-Stack Node.js"}
+          <span className="text-[10px] text-cyan-400 font-mono truncate" title={serverInfo}>
+            {status === "online" ? serverInfo : "Disconnected"}
           </span>
         </div>
       </div>
