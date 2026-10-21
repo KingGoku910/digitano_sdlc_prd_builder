@@ -332,14 +332,6 @@ export default function App() {
 
             <div className="flex items-center gap-3">
               <button
-                onClick={() => setIsExportModalOpen(true)}
-                className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-slate-300 hover:text-cyan-300 transition-colors cursor-pointer"
-              >
-                <FolderGit2 className="w-3.5 h-3.5 text-purple-400" />
-                <span>Monorepo Specs</span>
-              </button>
-
-              <button
                 onClick={() => {
                   setSessionExpiredNotice(null);
                   setCurrentView("login");
@@ -402,13 +394,6 @@ export default function App() {
                 <span>Sign In via AWS Cognito</span>
               </button>
 
-              <button
-                onClick={() => setIsExportModalOpen(true)}
-                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[#131924] hover:bg-[#1a2332] border border-[#1E293B] text-purple-300 font-medium text-sm transition-all cursor-pointer"
-              >
-                <FolderGit2 className="w-4 h-4 text-purple-400" />
-                <span>View Monorepo Specs</span>
-              </button>
             </div>
 
             {/* Stats Row */}
