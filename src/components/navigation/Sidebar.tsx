@@ -4,7 +4,6 @@ import {
   History,
   Settings,
   LogOut,
-  FolderGit2,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -174,28 +173,6 @@ export function Sidebar({
             );
           })}
 
-          {/* Monorepo Files Inspector */}
-          {onOpenExportModal && (
-            <div className="relative group">
-              <button
-                onClick={onOpenExportModal}
-                title={isCollapsed ? "Export Codebase" : undefined}
-                className={`w-full flex items-center rounded-xl text-sm font-medium text-slate-400 hover:text-cyan-300 hover:bg-[#1E293B]/60 transition-all cursor-pointer border border-transparent ${
-                  isCollapsed ? "justify-center p-2.5" : "gap-3 px-3.5 py-2.5"
-                }`}
-              >
-                <FolderGit2 className="w-4 h-4 text-purple-400 shrink-0" />
-                {!isCollapsed && <span>Export Codebase</span>}
-              </button>
-
-              {/* Floating tooltip when collapsed */}
-              {isCollapsed && (
-                <span className="pointer-events-none absolute left-full ml-3 px-2 py-1 rounded bg-[#1E293B] text-slate-200 text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-lg border border-slate-700">
-                  Export Codebase
-                </span>
-              )}
-            </div>
-          )}
         </nav>
       </div>
 
