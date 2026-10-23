@@ -9,7 +9,6 @@ interface BackendStatusIndicatorProps {
 export function BackendStatusIndicator({ isCollapsed = false }: BackendStatusIndicatorProps) {
   const [status, setStatus] = useState<"online" | "starting" | "offline">("online");
   const [latency, setLatency] = useState<number | null>(4);
-  const [serverInfo, setServerInfo] = useState<string>("Python FastAPI (Render)");
   const [isPinging, setIsPinging] = useState(false);
 
   const checkStatus = async () => {
@@ -18,15 +17,6 @@ export function BackendStatusIndicator({ isCollapsed = false }: BackendStatusInd
       const result = await pingBackendHealth();
       setStatus(result.status);
       setLatency(result.latencyMs);
-      if (result.data) {
-        if (result.data.engine) {
-          setServerInfo(result.data.engine);
-        } else if (result.data.service) {
-          setServerInfo(result.data.service);
-        } else {
-          setServerInfo("Python FastAPI (Render)");
-        }
-      }
     } catch {
       setStatus("offline");
     } finally {
@@ -48,7 +38,7 @@ export function BackendStatusIndicator({ isCollapsed = false }: BackendStatusInd
 
   const tooltipText =
     status === "online"
-      ? `Connected to ${serverInfo} (${latency !== null ? `${latency}ms` : "Active"})`
+      ? `Server Online (${latency !== null ? `${latency}ms latency` : "Active"})`
       : status === "starting"
       ? "Server Starting..."
       : "Server Offline";
@@ -118,12 +108,18 @@ export function BackendStatusIndicator({ isCollapsed = false }: BackendStatusInd
         {/* Status Text */}
         <div className="flex flex-col overflow-hidden">
           <span className="font-medium text-slate-200 truncate">
-            {status === "online" && "Python Backend Online"}
+            {status === "online" && "Server Online"}
             {status === "starting" && "Server Starting..."}
             {status === "offline" && "Server Offline"}
           </span>
-          <span className="text-[10px] text-cyan-400 font-mono truncate" title={serverInfo}>
-            {status === "online" ? serverInfo : "Disconnected"}
+          <span className="text-[10px] text-cyan-400 font-mono truncate">
+            {status === "online" && latency !== null
+              ? `${latency}ms latency`
+              : status === "online"
+              ? "Connected"
+              : status === "starting"
+              ? "Connecting..."
+              : "Disconnected"}
           </span>
         </div>
       </div>
