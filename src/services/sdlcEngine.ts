@@ -41,6 +41,7 @@ export function getUserProjectsStorageKey(userEmail?: string): string {
 
 export async function fetchUserProjectsFromDynamoDB(userEmail?: string): Promise<ProjectRecord[]> {
   const email = (userEmail || getStoredEmail() || "rynorossouw14@gmail.com").toLowerCase().trim();
+  const localList = loadSavedProjects(email);
 
   // 1. Fetch from server DynamoDB endpoint (queries DynamoDB table & persistent store)
   try {
@@ -50,32 +51,55 @@ export async function fetchUserProjectsFromDynamoDB(userEmail?: string): Promise
     });
     if (res.ok) {
       const data = await res.json();
-      if (Array.isArray(data.projects)) {
-        if (typeof window !== "undefined") {
-          localStorage.setItem(getUserProjectsStorageKey(email), JSON.stringify(data.projects));
+      const serverProjects: any[] = Array.isArray(data.projects) ? data.projects : [];
+
+      // Two-way merge: Combine server projects and local cache without duplicates
+      const projectMap = new Map<string, ProjectRecord>();
+
+      serverProjects.forEach((p: any, idx: number) => {
+        const id = p.id || p.SK?.replace("PROJECT#", "") || `proj_${idx}_${Date.now()}`;
+        projectMap.set(id, {
+          ...p,
+          id,
+          PK: p.PK || `USER#${email}`,
+          SK: p.SK || `PROJECT#${id}`,
+        });
+      });
+
+      // Preserve local projects and auto-sync any that are missing on the server
+      localList.forEach((p) => {
+        if (!projectMap.has(p.id)) {
+          projectMap.set(p.id, p);
+          // Push unsynced project to server in background
+          try {
+            const postUrl = API_BASE_URL ? `${API_BASE_URL}/api/projects` : "/api/projects";
+            fetch(postUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-user-email": email,
+              },
+              body: JSON.stringify(p),
+            }).catch(() => {});
+          } catch {}
         }
-        // If projects were found in DynamoDB partition, return them sanitized
-        if (data.projects.length > 0) {
-          const seen = new Set<string>();
-          return data.projects
-            .map((p: any, idx: number) => ({
-              ...p,
-              id: p.id || p.SK?.replace("PROJECT#", "") || `proj_${idx}_${Date.now()}`,
-            }))
-            .filter((p: any) => {
-              if (seen.has(p.id)) return false;
-              seen.add(p.id);
-              return true;
-            });
-        }
+      });
+
+      const merged = Array.from(projectMap.values()).sort(
+        (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      );
+
+      if (typeof window !== "undefined") {
+        localStorage.setItem(getUserProjectsStorageKey(email), JSON.stringify(merged));
       }
+      return merged;
     }
   } catch (err) {
     console.warn("Notice: Fetching from server DynamoDB failed, using client cache:", err);
   }
 
   // 2. Fallback to client cache
-  return loadSavedProjects(email);
+  return localList;
 }
 
 export function loadSavedProjects(userEmail?: string): ProjectRecord[] {
@@ -151,7 +175,7 @@ export async function saveProjectToStorage(project: ProjectRecord, userEmail?: s
       const updated = [enrichedProject, ...existing.filter((p) => p.id !== projectId)];
       localStorage.setItem(getUserProjectsStorageKey(email), JSON.stringify(updated.slice(0, 50)));
     } catch (err) {
-      console.error("Local storage error:", err);
+      console.warn("Local storage notice:", err);
     }
   }
 
@@ -181,7 +205,7 @@ export async function deleteProjectFromStorage(projectId: string, userEmail?: st
       const updated = existing.filter((p) => p.id !== projectId);
       localStorage.setItem(getUserProjectsStorageKey(email), JSON.stringify(updated));
     } catch (err) {
-      console.error("Local delete error:", err);
+      console.warn("Local delete notice:", err);
     }
   }
 
@@ -644,10 +668,10 @@ export async function runAgentPipeline(
   const agentDefs = [
     {
       id: "researcher_agent",
-      name: "Technical Researcher",
+      name: "Research Agent",
       tag: "RES",
       number: "ADK 0",
-      role: "Market & Ground Truth (MCP GoogleSearchTool)",
+      role: "Ground Truth & Market Intelligence (MCP GoogleSearchTool)",
       baseLogs: [
         "Invoking MCP GoogleSearchTool(bypass_multi_tools_limit=True)...",
         "Crawling competitor latency benchmarks & active library versions...",
@@ -656,10 +680,10 @@ export async function runAgentPipeline(
     },
     {
       id: "agent_1_vision",
-      name: "Vision & Scope Lead",
-      tag: "VIS",
+      name: "Product Owner",
+      tag: "PO",
       number: "ADK 1",
-      role: "Product Personas & Non-Goals",
+      role: "User Stories, Acceptance Criteria & MVP Scope",
       baseLogs: [
         "Ingesting Context Dossier from Technical Researcher...",
         "Formulating bounded user personas with explicit pain points...",
@@ -668,10 +692,10 @@ export async function runAgentPipeline(
     },
     {
       id: "agent_2_requirements",
-      name: "Requirements Engineer",
-      tag: "REQ",
+      name: "Solutions Architect",
+      tag: "ARC",
       number: "ADK 2",
-      role: "Gherkin Epics (Given-When-Then) & SLAs",
+      role: "Technical Systems Architecture & Component Design",
       baseLogs: [
         "Converting Vision into functional epics...",
         "Enforcing Given-When-Then Gherkin syntax on 100% of user stories...",
@@ -680,10 +704,10 @@ export async function runAgentPipeline(
     },
     {
       id: "agent_3_architecture",
-      name: "Systems Architect",
-      tag: "ARC",
+      name: "Database Engineer",
+      tag: "DB",
       number: "ADK 3",
-      role: "PostgreSQL DDL & REST Contracts",
+      role: "PostgreSQL DDL Schemas & Relational Data Modeling",
       baseLogs: [
         "Designing PostgreSQL DDL schema with relational foreign keys...",
         "Specifying OpenAPI RESTful contracts using strict domain nouns...",
@@ -692,10 +716,10 @@ export async function runAgentPipeline(
     },
     {
       id: "agent_4_uiux",
-      name: "Lead UX/UI Designer",
-      tag: "UIX",
+      name: "Fullstack Engineer",
+      tag: "FE",
       number: "ADK 4",
-      role: "Screen Layouts & 4-State Matrices",
+      role: "Client UI Components & State Management",
       baseLogs: [
         "Architecting cybernetic screen hierarchy & navigation flows...",
         "Defining 4-state component matrix (Default, Hover, Loading, Error)...",
@@ -704,10 +728,10 @@ export async function runAgentPipeline(
     },
     {
       id: "agent_5_risks",
-      name: "Risk & Compliance Officer",
-      tag: "RSK",
+      name: "Backend Engineer",
+      tag: "BE",
       number: "ADK 5",
-      role: "Zero-Trust Security & GDPR/HIPAA",
+      role: "RESTful API Endpoints & Asynchronous Pipelines",
       baseLogs: [
         "Establishing Zero-Trust boundary with OAuth2 PKCE & JWT auth...",
         "Specifying AES-256-GCM hardware encryption at rest...",
@@ -716,10 +740,10 @@ export async function runAgentPipeline(
     },
     {
       id: "agent_6_metrics",
-      name: "Telemetry Strategist",
-      tag: "MTR",
+      name: "Software Analyst",
+      tag: "ANL",
       number: "ADK 6",
-      role: "Hard Numerical KPIs & Milestones",
+      role: "Code Review, Testing SLAs & Quality Assurance",
       baseLogs: [
         "Formulating measurable numerical KPIs and SLA uptime targets...",
         "Structuring Phased MVP Release Milestones (Alpha, Beta, GA)...",
@@ -728,10 +752,10 @@ export async function runAgentPipeline(
     },
     {
       id: "orchestrator_agent",
-      name: "Master Orchestrator",
+      name: "Orchestrator",
       tag: "ORC",
       number: "ADK 7",
-      role: "Quality Gatekeeper & Master PRD Synthesis",
+      role: "Master Synthesis, Quality Gate & PRD Compilation",
       baseLogs: [
         "Executing Orchestrator Quality Gate audit across all 7 deliverables...",
         "Auditing for banned tokens: 0 occurrences found...",

@@ -19,10 +19,14 @@ export function TopNavbar({ currentProjectTitle, onOpenExportModal }: TopNavbarP
             v2.5
           </span>
         </div>
-        <span className="text-slate-600">/</span>
-        <span className="text-xs font-medium text-slate-300">
-          {currentProjectTitle || "Autonomous Scrum Orchestrator"}
-        </span>
+        {currentProjectTitle && (
+          <>
+            <span className="text-slate-600 hidden sm:inline">/</span>
+            <span className="text-xs font-medium text-slate-300 truncate max-w-[120px] sm:max-w-[200px]">
+              {currentProjectTitle}
+            </span>
+          </>
+        )}
       </div>
 
       <div className="flex items-center gap-2.5">

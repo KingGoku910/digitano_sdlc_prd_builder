@@ -3,7 +3,7 @@
  * Autonomous Multi-Agent SDLC Engine (8-Agent Directed Cluster)
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { NeuralBackground } from "./components/NeuralBackground";
 import { AuthCard } from "./components/auth/AuthCard";
 import { Sidebar } from "./components/navigation/Sidebar";
@@ -159,6 +159,20 @@ export default function App() {
   const [currentProjectTitle, setCurrentProjectTitle] = useState("");
   const [currentPrompt, setCurrentPrompt] = useState("");
   const [currentSpecInputs, setCurrentSpecInputs] = useState<ProjectSpecificationInputs | null>(null);
+  const mainScrollRef = useRef<HTMLElement>(null);
+
+  const handleLaunchStudio = () => {
+    if (isAuthenticated() && !isSessionExpiredDueToInactivity()) {
+      recordUserActivity();
+      setCurrentView("dashboard");
+    } else {
+      if (isSessionExpiredDueToInactivity()) {
+        logoutUser();
+        setSessionExpiredNotice("Your previous session expired due to 15 minutes of inactivity. Please sign in again.");
+      }
+      setCurrentView("login");
+    }
+  };
 
   // Sync auth state on mount
   useEffect(() => {
@@ -225,6 +239,12 @@ export default function App() {
     setCompletedCount(0);
     setAgents(INITIAL_AGENTS.map((a) => ({ ...a, status: "pending", logs: [] })));
 
+    // Scroll to the top immediately so progress bars and tracker are immediately visible
+    if (mainScrollRef.current) {
+      mainScrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
     try {
       const generatedArtifacts = await runAgentPipeline(
         projectId,
@@ -254,7 +274,13 @@ export default function App() {
     setArtifacts(null);
     setCompletedCount(0);
     setCurrentSpecInputs(null);
+    setCurrentProjectTitle("");
+    setCurrentPrompt("");
     setAgents(INITIAL_AGENTS.map((a) => ({ ...a, status: "pending", logs: [] })));
+    if (mainScrollRef.current) {
+      mainScrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleSelectHistoryProject = (project: ProjectRecord) => {
@@ -342,7 +368,7 @@ export default function App() {
               </button>
 
               <button
-                onClick={() => setCurrentView("dashboard")}
+                onClick={handleLaunchStudio}
                 className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#06B6D4] to-[#3B82F6] text-xs font-semibold text-white shadow-md shadow-cyan-500/20 hover:opacity-95 transition-opacity cursor-pointer"
               >
                 Launch Studio
@@ -376,7 +402,7 @@ export default function App() {
             {/* CTA Buttons */}
             <div className="flex flex-wrap items-center justify-center gap-4 mb-12">
               <button
-                onClick={() => setCurrentView("dashboard")}
+                onClick={handleLaunchStudio}
                 className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-[#06B6D4] to-[#3B82F6] hover:opacity-95 text-white font-semibold text-sm transition-all shadow-xl shadow-cyan-500/25 cursor-pointer transform hover:-translate-y-0.5"
               >
                 <span>Launch Studio Dashboard</span>
@@ -731,6 +757,9 @@ export default function App() {
             isCollapsed={isSidebarCollapsed}
             onToggleCollapse={setIsSidebarCollapsed}
             onTabChange={(tab) => {
+              if (tab === "new_project") {
+                handleReset();
+              }
               setDashboardTab(tab as any);
             }}
             onLogout={handleLogout}
@@ -744,7 +773,7 @@ export default function App() {
               onOpenExportModal={() => setIsExportModalOpen(true)}
             />
 
-            <main className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8">
+            <main ref={mainScrollRef} className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8">
               {dashboardTab === "history" && (
                 <HistoryView
                   onSelectProject={handleSelectHistoryProject}

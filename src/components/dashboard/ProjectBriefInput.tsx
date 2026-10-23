@@ -36,26 +36,26 @@ interface ProjectBriefInputProps {
 
 const SAMPLE_BLUEPRINTS = [
   {
-    title: "AuditPulse AI",
+    title: "Grandmaster 3D Chess Arena",
     type: "Web App" as PlatformType,
     frontend: "Next.js (App Router)",
     ui: ["Tailwind CSS v4", "shadcn/ui"],
     backend: "Python (FastAPI)",
-    dbPreset: "supabase_vector",
+    dbPreset: "postgres_redis",
     models: ["us.anthropic.claude-sonnet-5", "gemini-3.8-flash"],
     mode: "Multi-Agent" as AgentModeType,
-    description: `Build "AuditPulse AI," an enterprise-grade B2B contract risk auditing platform. Mid-market companies, agencies, and legal teams upload vendor NDAs, MSAs, and client agreements. The system parses document text, identifies high-risk liabilities, missing indemnity protections, and hidden auto-renewal clauses, providing an instant overall risk score (0–100) along with line-by-line redline suggestions.`,
+    description: `Build "Grandmaster 3D Chess Arena," an immersive WebGL multiplayer chess platform. Players compete in real-time with WebSockets, view interactive 3D board animations via Three.js, receive Stockfish WebAssembly move analysis, and track historical Elo ratings with automated match review.`,
   },
   {
-    title: "DripCheck Fashion",
+    title: "AeroTrack Drone Telemetry",
     type: "Web App" as PlatformType,
     frontend: "Next.js (App Router)",
     ui: ["Tailwind CSS v4", "shadcn/ui"],
     backend: "Python (FastAPI)",
-    dbPreset: "firebase_firestore",
-    models: ["us.anthropic.claude-sonnet-5", "gemini-3.8-flash"],
+    dbPreset: "dynamo_s3",
+    models: ["gemini-3.5-pro", "us.anthropic.claude-haiku-4-5-20251001-v1:0"],
     mode: "Multi-Agent" as AgentModeType,
-    description: `Build "DripCheck", a high-performance fashion rating web application with Next.js 16 (App Router), Tailwind CSS v4, and shadcn/ui. Python FastAPI backend processes uploaded outfit photos, stores media assets in Firebase Firestore DB and Firebase Cloud Storage, and invokes AWS Bedrock Claude Sonnet 5 with Google Gemini failover for 0-10 style scoring.`,
+    description: `Build "AeroTrack", an autonomous aerial drone fleet operations command center. Live geospatial mapping tracks fleet telemetry, battery state of charge, LiDAR collision zones, and flight corridor compliance with automated emergency landing triggers.`,
   },
   {
     title: "OmniFleet Logistics HUD",
@@ -398,7 +398,7 @@ ${promptText.trim()}`;
               type="text"
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
-              placeholder="e.g. AuditPulse AI or NextGen HealthVault"
+              placeholder="e.g. 3D Chess Arena or OmniFleet Logistics"
               className="w-full px-4 py-2.5 bg-[#131924] border border-[#1E293B] rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#06B6D4] focus:ring-1 focus:ring-[#06B6D4] transition-all"
             />
           </div>

@@ -21,6 +21,7 @@ import {
   deleteProjectFromStorage,
 } from "../services/sdlcEngine";
 import { getStoredEmail, isAuthenticated } from "../config/aws-cognito";
+import { API_BASE_URL } from "../services/api";
 
 interface HistoryViewProps {
   onSelectProject: (project: ProjectRecord) => void;
@@ -59,18 +60,30 @@ export function HistoryView({ onSelectProject, onNewProject }: HistoryViewProps)
       });
       setProjects(sanitized);
 
-      // 2. Fetch DynamoDB status
-      const res = await fetch(`/api/dynamodb/status?email=${encodeURIComponent(email)}`);
-      if (res.ok) {
-        const data = await res.json();
+      // 2. Fetch DynamoDB status (safely non-blocking)
+      try {
+        const statusUrl = API_BASE_URL ? `${API_BASE_URL}/api/dynamodb/status?email=${encodeURIComponent(email)}` : `/api/dynamodb/status?email=${encodeURIComponent(email)}`;
+        const res = await fetch(statusUrl, {
+          headers: { "x-user-email": email },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setDynamoStatus({
+            tableName: data.tableName || "DigitanoProjects",
+            awsConfigured: Boolean(data.awsConfigured),
+            partitionKey: data.partitionKey || `USER#${email}`,
+          });
+        }
+      } catch {
+        // Status fetch is non-critical telemetry; assign fallback display values
         setDynamoStatus({
-          tableName: data.tableName,
-          awsConfigured: data.awsConfigured,
-          partitionKey: data.partitionKey,
+          tableName: "DigitanoProjects (DynamoDB Single-Table)",
+          awsConfigured: false,
+          partitionKey: `USER#${email}`,
         });
       }
     } catch (err) {
-      console.error("Failed to load user projects:", err);
+      console.warn("Notice: Fetching remote projects unavailable, falling back to local storage cache:", err);
       const fallbackList = loadSavedProjects(email);
       const seen = new Set<string>();
       const sanitized: ProjectRecord[] = [];

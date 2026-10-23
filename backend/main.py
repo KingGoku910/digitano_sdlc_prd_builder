@@ -1,6 +1,7 @@
 """FastAPI application for Digitano Dev-Docs Google ADK Engine."""
 import os
 import uuid
+import json
 import asyncio
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
@@ -76,6 +77,141 @@ def health():
 @app.get("/api/ping")
 def ping():
     return {"status": "online", "timestamp": datetime.now(timezone.utc).isoformat()}
+
+STORAGE_DIR = os.path.join(os.path.dirname(__file__), ".storage")
+PROJECTS_FILE = os.path.join(STORAGE_DIR, "projects.json")
+
+def load_stored_projects(email: str) -> List[Dict[str, Any]]:
+    clean_email = email.strip().lower()
+    if os.path.exists(PROJECTS_FILE):
+        try:
+            with open(PROJECTS_FILE, "r") as f:
+                data = json.load(f)
+                return [p for p in data if p.get("userEmail", "").strip().lower() == clean_email]
+        except Exception:
+            return []
+    return []
+
+def save_stored_project(project: Dict[str, Any]):
+    os.makedirs(STORAGE_DIR, exist_ok=True)
+    all_projects = []
+    if os.path.exists(PROJECTS_FILE):
+        try:
+            with open(PROJECTS_FILE, "r") as f:
+                all_projects = json.load(f)
+        except Exception:
+            all_projects = []
+    
+    p_id = project.get("id") or project.get("projectId")
+    all_projects = [p for p in all_projects if (p.get("id") or p.get("projectId")) != p_id]
+    all_projects.insert(0, project)
+    
+    try:
+        with open(PROJECTS_FILE, "w") as f:
+            json.dump(all_projects, f, indent=2)
+    except Exception:
+        pass
+
+def delete_stored_project(project_id: str, email: str) -> bool:
+    if os.path.exists(PROJECTS_FILE):
+        try:
+            with open(PROJECTS_FILE, "r") as f:
+                all_projects = json.load(f)
+            new_list = [p for p in all_projects if not ((p.get("id") or p.get("projectId")) == project_id and p.get("userEmail", "").strip().lower() == email.strip().lower())]
+            with open(PROJECTS_FILE, "w") as f:
+                json.dump(new_list, f, indent=2)
+            return True
+        except Exception:
+            return False
+    return False
+
+@app.get("/api/dynamodb/status")
+def dynamodb_status(email: Optional[str] = None):
+    user_email = (email or "ryno9rossouw@gmail.com").strip().lower()
+    return {
+        "status": "online",
+        "tableName": settings.DYNAMODB_TABLE_NAME or "DigitanoProjects",
+        "partitionKey": f"USER#{user_email}",
+        "userEmail": user_email,
+        "awsConfigured": bool(settings.AWS_ACCESS_KEY_ID and settings.AWS_SECRET_ACCESS_KEY),
+        "region": settings.AWS_REGION or "us-east-1",
+    }
+
+@app.get("/api/projects")
+def get_projects(email: Optional[str] = None, request: Request = None):
+    user_email = email or (request.headers.get("x-user-email") if request else None) or "ryno9rossouw@gmail.com"
+    clean_email = user_email.strip().lower()
+    
+    projects = []
+    try:
+        from dynamo_service import query_user_projects
+        projects = query_user_projects(clean_email)
+    except Exception:
+        pass
+        
+    file_projects = load_stored_projects(clean_email)
+    seen_ids = set()
+    combined = []
+    
+    for p in projects + file_projects:
+        pid = p.get("id") or p.get("projectId") or p.get("SK", "").replace("PROJECT#", "")
+        if pid and pid not in seen_ids:
+            seen_ids.add(pid)
+            combined.append(p)
+            
+    return {
+        "success": True,
+        "userEmail": clean_email,
+        "PK": f"USER#{clean_email}",
+        "count": len(combined),
+        "projects": combined
+    }
+
+@app.post("/api/projects")
+async def save_project_endpoint(request: Request):
+    data = await request.json()
+    user_email = (data.get("userEmail") or request.headers.get("x-user-email") or "ryno9rossouw@gmail.com").strip().lower()
+    project_id = data.get("id") or data.get("projectId") or f"proj_{uuid.uuid4().hex[:8]}"
+    
+    item = {
+        **data,
+        "id": project_id,
+        "projectId": project_id,
+        "userEmail": user_email,
+        "userId": user_email,
+        "PK": f"USER#{user_email}",
+        "SK": f"PROJECT#{project_id}",
+        "updatedAt": datetime.now(timezone.utc).isoformat()
+    }
+    
+    try:
+        from dynamo_service import put_project
+        put_project(
+            user_email=user_email,
+            project_id=project_id,
+            title=data.get("title", "Untitled Project"),
+            prompt=data.get("prompt", ""),
+            artifacts=data.get("artifacts", {}),
+            metadata=data.get("metadata", {})
+        )
+    except Exception:
+        pass
+        
+    save_stored_project(item)
+    return {"success": True, "project": item}
+
+@app.delete("/api/projects/{project_id}")
+def delete_project_endpoint(project_id: str, email: Optional[str] = None, request: Request = None):
+    user_email = (email or (request.headers.get("x-user-email") if request else None) or "ryno9rossouw@gmail.com").strip().lower()
+    
+    try:
+        from dynamo_service import delete_project_record
+        delete_project_record(user_email, project_id)
+    except Exception:
+        pass
+        
+    delete_stored_project(project_id, user_email)
+    return {"success": True, "projectId": project_id}
 
 @app.post("/api/generate-prd")
 async def generate_prd_endpoint(req: GeneratePrdRequest):

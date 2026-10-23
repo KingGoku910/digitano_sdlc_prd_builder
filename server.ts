@@ -68,6 +68,17 @@ async function startServer() {
   const app = express();
   app.use(express.json({ limit: '15mb' }));
 
+  // CORS middleware allowing cross-origin requests, custom headers, and preflight OPTIONS
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-user-email');
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(200);
+    }
+    next();
+  });
+
   // Health endpoint (polled by UI and status indicator)
   app.get('/api/health', (req, res) => {
     res.json({
