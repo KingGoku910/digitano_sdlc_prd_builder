@@ -17,6 +17,7 @@ import { generateVibePromptsForStrategy } from "./vibeCoderStrategies";
 import { getStoredEmail } from "../config/aws-cognito";
 import { sanitizeAndFormatMarkdown } from "./markdownSanitizer";
 import { ProjectSpecificationInputs } from "../types/projectSpec";
+import { API_BASE_URL } from "./api";
 
 export interface ProjectRecord {
   id: string;
@@ -43,7 +44,8 @@ export async function fetchUserProjectsFromDynamoDB(userEmail?: string): Promise
 
   // 1. Fetch from server DynamoDB endpoint (queries DynamoDB table & persistent store)
   try {
-    const res = await fetch(`/api/projects?email=${encodeURIComponent(email)}`, {
+    const endpoint = API_BASE_URL ? `${API_BASE_URL}/api/projects?email=${encodeURIComponent(email)}` : `/api/projects?email=${encodeURIComponent(email)}`;
+    const res = await fetch(endpoint, {
       headers: { "x-user-email": email },
     });
     if (res.ok) {
@@ -155,7 +157,8 @@ export async function saveProjectToStorage(project: ProjectRecord, userEmail?: s
 
   // 2. Synchronize to DynamoDB endpoint
   try {
-    await fetch("/api/projects", {
+    const postUrl = API_BASE_URL ? `${API_BASE_URL}/api/projects` : "/api/projects";
+    await fetch(postUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -184,7 +187,8 @@ export async function deleteProjectFromStorage(projectId: string, userEmail?: st
 
   // 2. Remove from DynamoDB endpoint
   try {
-    await fetch(`/api/projects/${projectId}?email=${encodeURIComponent(email)}`, {
+    const deleteUrl = API_BASE_URL ? `${API_BASE_URL}/api/projects/${projectId}?email=${encodeURIComponent(email)}` : `/api/projects/${projectId}?email=${encodeURIComponent(email)}`;
+    await fetch(deleteUrl, {
       method: "DELETE",
       headers: {
         "x-user-email": email,

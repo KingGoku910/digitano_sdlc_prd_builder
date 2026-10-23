@@ -8,9 +8,12 @@ import { getStoredToken } from "../config/aws-cognito";
 
 const getApiBaseUrl = () => {
   const envUrl = (import.meta as any).env?.VITE_API_BASE_URL;
-  if (envUrl) return envUrl;
-  if (typeof window !== "undefined" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
-    return "https://digitano-backend.onrender.com";
+  if (envUrl) return envUrl.replace(/\/+$/, "");
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    if (host !== "localhost" && host !== "127.0.0.1" && !host.includes("run.app")) {
+      return "https://digitano-backend.onrender.com";
+    }
   }
   return "";
 };
@@ -59,9 +62,10 @@ export async function pingBackendHealth(): Promise<{
   data?: any;
 }> {
   const startTime = Date.now();
+  const url = API_BASE_URL ? `${API_BASE_URL}/api/health` : `/api/health`;
   try {
-    const response = await axios.get(`/api/health`, {
-      timeout: 5000,
+    const response = await axios.get(url, {
+      timeout: 10000,
     });
     const latency = Date.now() - startTime;
     if (response.status === 200) {
@@ -74,7 +78,7 @@ export async function pingBackendHealth(): Promise<{
     return { status: "offline", latencyMs: latency };
   } catch (err: any) {
     const latency = Date.now() - startTime;
-    if (latency >= 3000 && err.code === "ECONNABORTED") {
+    if (latency >= 2500 || err.code === "ECONNABORTED" || err.response?.status === 502 || err.response?.status === 503) {
       return { status: "starting", latencyMs: latency };
     }
     return { status: "offline", latencyMs: latency };
